@@ -100,6 +100,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="m1" data-mode="1" aria-pressed="true">2 สะพานใหม่ตามแบบ ทล. (จุดขัดแย้ง)</button>
       <button id="m2" data-mode="2">3 แผนงาน 22 kV (H-Frame เดิม)</button>
       <button id="m3" data-mode="3">4 ทางเลือก: ย้ายเสา 115 kV ฝั่งใต้</button>
+      <button id="m4" data-mode="4">5 ตัด DE วงจรล่าง H-Frame</button>
     </div>
     <div class="views" role="group" aria-label="มุมมอง">
       <button id="v3d">มุม 3D</button>
@@ -108,6 +109,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="vside">มองข้ามห้วย</button>
       <button id="v22">มองแนว 22 kV</button>
       <button id="vunder">ใต้สะพาน</button>
+      <button id="vdeS" hidden>DE ฝั่งใต้</button>
+      <button id="vdeN" hidden>DE ฝั่งเหนือ</button>
       <select id="poleSel" aria-label="ซูมไปที่หัวเสา" title="หรือดับเบิลคลิกที่เสาในโมเดล"><option value="">ซูมหัวเสา…</option></select>
       <a href="parts.html">ชุดอุปกรณ์ตามแบบ</a>
     </div>
@@ -115,7 +118,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <h2 id="boqTitle">ปริมาณงาน (BOQ)</h2>
       <p class="lead">นับจากรูปทรงในโมเดลของขั้นที่เลือก รายการวัสดุย่อยคัดจากบัญชีวัสดุในแบบมาตรฐาน กฟภ. ตามเลขแบบ ราคาให้กรอกเอง เก็บไว้ในเบราว์เซอร์นี้เท่านั้น</p>
       <div class="boqbar" role="group" aria-label="ทางเลือก">
-        <button data-bm="2">3 แผนงาน 22 kV</button><button data-bm="3">4 ย้ายเสา 115 kV ฝั่งใต้</button>
+        <button data-bm="2">3 แผนงาน 22 kV</button><button data-bm="3">4 ย้ายเสา 115 kV ฝั่งใต้</button><button data-bm="4">5 ตัด DE วงจรล่าง</button>
         <button id="boqCopy">คัดลอกตาราง (วางใน Excel)</button><button id="boqClose">กลับไปโมเดล 3D</button>
       </div>
       <div class="grid-wrap"><table class="boq" id="boqT"></table></div>
@@ -630,6 +633,22 @@ table.ph th { color: var(--muted); font-weight: 600; }
         const n = pl.acsr.filter(pl.enc).length;
         put(polesG, `22 kV ช่วง ${fmt(L22)} ม.: ACSR ล้ำแนวสะพาน ${n} เฟส`, 20, gy() + pl.hT + 1.5, HF[1][1] - 3, n ? BAD : NEW);
       }
+    } else if (mode === 4) {
+      // lower circuit (120 SAC) cut at both H-Frames: crossing span removed, each side dead-ended on the outer side; top ACSR unchanged
+      pl.acsr.forEach(p => { polesG.add(wire(p.a, p.b, p.sag, lineMat.acsr, 0.035)); encDraw(p, polesG); });
+      pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.ghost, 0.06)));
+      put(polesG, `รื้อช่วงข้ามวงจรล่าง 120 SAC ${fmt(L22)} ม.`, -40, gy() + pl.hL - 3.5, HF[0][1] + 2, BAD);
+      HF.forEach(([x, z], i) => {
+        const sx = i ? 1 : -1;                                     // outer side = away from the bridge
+        pl.low.forEach(dz => {
+          const y = gy() + pl.hL, zz = z + dz;
+          const de = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.9, 10), mat.poleNew); de.rotation.z = Math.PI / 2; de.position.set(x + sx * 0.75, y, zz); polesG.add(de);
+          for (const r of [0.6, -0.6]) { const c = box(0.05, 0.55, 0.05, mat.poleBad, x - sx * 1.15, y, zz, polesG); c.rotation.x = r; }   // red X: cut on the bridge side
+        });
+        put(polesG, `DE วงจรล่าง H-Frame ${i ? 'ฝั่งเหนือ' : 'ฝั่งใต้'}`, x, gy() + pl.hL - 1.8, z + Math.max(...pl.low) + 2.5, NEW);
+      });
+      const n = pl.acsr.filter(pl.enc).length;
+      put(polesG, `ACSR วงจรบนคงเดิม: ล้ำแนวสะพาน ${n} เฟส`, 20, gy() + pl.hT + 1.5, HF[1][1] - 3, n ? BAD : NEW);
     } else {
       pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.ghost, 0.06)));
       put(polesG, 'รื้อวงจร 120 SAC ช่วงข้าม', -40, gy() + pl.hL - 3.5, HF[0][1] + 2, BAD);
@@ -689,6 +708,12 @@ table.ph th { color: var(--muted); font-weight: 600; }
         `<div>ระยะดิ่งเหนือพื้นสะพาน/ผิวทาง เกณฑ์ 7.50 ม. ${ok(okV)}</div>` +
         `<div style="color:var(--warn)">ยังต้องตรวจ: อุปกรณ์จับปลายสาย/แคล้มป์ตำแหน่ง SAC เดิมใช้กับ ACSR ได้หรือไม่ แรงดึงและระยะหย่อนจริงช่วง ${fmt(L22)} ม. ระยะห่างระหว่างเฟสเมื่อย้ายลง</div>` +
         `<div style="color:var(--muted);font-size:13px">ถ้าลูกถ้วยวงจรล่างอยู่ตำแหน่งทางราบเดียวกับวงจรบน การย้ายลงไม่ได้เพิ่มระยะทางราบ ให้กรอกตำแหน่งจริงจากการสำรวจ</div>`;
+    } else if (P.mode === 4) {
+      const n = pl.acsr.filter(pl.enc).length;
+      el.innerHTML = `<div class="big ${n ? 'st-warn' : 'st-ok'}">ตัด DE วงจรล่างที่ H-Frame ทั้งสองฝั่ง</div>` +
+        `<div>รื้อช่วงข้ามวงจรล่าง 120 SAC ${fmt(L22)} ม. วงจรล่างแต่ละฝั่งจบที่ชุดเข้าปลายสาย (DE) ด้านนอกของ H-Frame (สีเขียว) จุดตัดด้านสะพานแสดงสีแดง ใช้ปุ่ม "DE ฝั่งใต้" / "DE ฝั่งเหนือ" ด้านล่างเพื่อซูมดู</div>` +
+        `<div>เหนือสะพานเหลือเฉพาะวงจรบน ACSR ${n ? `<span class="st-bad">ยังล้ำแนวสะพาน ${n} เฟส</span>` : '<span class="st-ok">ไม่ล้ำ</span>'}</div>` + phaseTable(pl.acsr) +
+        `<div style="color:var(--warn)">ต้องตรวจ: วงจรล่างสองฝั่งสะพานจะไม่ต่อถึงกัน ต้องยืนยันการจ่ายไฟ/โหลดของวงจรนี้แต่ละฝั่ง, H-Frame รับแรงดึงวงจรล่างด้านเดียว (กำลังโครงสร้างและสายยึดโยง), ชุด DE ของ 2221 เดิมใช้ต่อได้หรือไม่ ความสูงและตำแหน่งวงจรล่างเป็นค่าสมมติ</div>`;
     } else {
       const m = [num('mvA'), num('mvO')], e = m[0] < 0 ? edgeW(m[0]) : edgeW(m[0]), d = m[1] - e, inSlab = onSlab(m[0]) && m[1] <= 14.5;
       const sp = S.span115, c = sp[1].c, Lmax = Math.max(sp[0].L, sp[1].L);
@@ -725,6 +750,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     buildTerrain(); buildOld(); buildNew(); buildROW(); buildPoles(); buildGIS(); fillPoleSel();
     oldG.visible = P.mode === 0; newG.visible = P.mode >= 1;
     document.getElementById('secMove').style.display = P.mode === 3 ? '' : 'none';
+    for (const id of ['vdeS', 'vdeN']) document.getElementById(id).hidden = P.mode !== 4;
     status();
     if (!document.getElementById('boqv').hidden) renderBoq();
     document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.mode === P.mode)));
@@ -747,6 +773,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
     vside: [[0, 3, 150], [0, -1, 0]],
     v22: [[-190, 24, 48], [0, 4, 8]],
     vunder: [[-36, -4, 32], [-50, -4.5, 0]],
+    get vdeS() { const [x, z] = HF[0], y = gy() + num('hLow'); return [[x + 7, y + 1.2, z - 5], [x, y - 0.3, z]]; },   // lower-circuit dead-end, seen from the bridge side
+    get vdeN() { const [x, z] = HF[1], y = gy() + num('hLow'); return [[x - 7, y + 1.2, z - 5], [x, y - 0.3, z]]; },
     vdet: [[P115[0][0] + 9, 19.5, P115[0][1] + 10], [P115[0][0], 16.5, P115[0][1] + 1.2]],
   };
   let tween = null;
@@ -785,7 +813,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       ['แหวนสี่เหลี่ยมแบน 62×62×6', 6, 'ตัว', '01180101'], ['แหวนสปริง M16', 3, 'ตัว', '01180301'], ['ชุดลูกถ้วยแขวน (D-17C)', 3, 'ชุด', 'D-17C'],
       ['ชุดสายล่อฟ้า (D-51)', 1, 'ชุด', 'D-51'], ['ฐานรากเสา (D-10A)', 1, 'ชุด', 'D-10A'], ['การต่อลงดิน (D-25)', 1, 'ชุด', 'D-25']],
   };
-  const MODE_N = { 2: '3 แผนงาน 22 kV (H-Frame เดิม)', 3: '4 ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)' };
+  const MODE_N = { 2: '3 แผนงาน 22 kV (H-Frame เดิม)', 3: '4 ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)', 4: '5 ตัด DE วงจรล่างที่ H-Frame ทั้งสองฝั่ง' };
   function boqRows() {
     const R = [], m = v => Math.ceil(v), sec = t => R.push({ sec: t }), it = (d, ref, q, u, key = d) => R.push({ d, ref, q, u, key });
     const asm = (d, ref, n) => { R.push({ d: `${d} ×${n} ชุด`, ref: 'แบบ ' + ref, asm: true });
@@ -798,6 +826,13 @@ table.ph th { color: var(--muted); font-weight: 600; }
       it('ย้ายสาย ACSR ลงลูกถ้วยวงจรล่าง (ปลายละ 1 จุดต่อเฟส)', '—', 2 * n, 'จุด', 'mvacsr');
       it('สเตรนแคลมป์ Al/ACSR (เฉพาะถ้าของเดิมใช้กับ ACSR ไม่ได้)', '03110000', 2 * n, 'ชุด', 'clamp');
       it('ปรับระยะหย่อนสาย ACSR ช่วงข้าม', '—', n, 'เฟส', 'resag');
+    } else if (P.mode === 4) {
+      sec('งานรื้อถอน');
+      it('รื้อช่วงข้ามวงจรล่าง 120 SAC (ความยาวช่วง × 3 เฟส)', 'ผู้ใช้แจ้ง', m(L22 * 3), 'ม.', 'rm:sac');
+      it('รื้อสายแจมเปอร์วงจรล่างที่ H-Frame', '—', 6, 'จุด', 'rm:jmp');
+      sec('งานติดตั้ง');
+      it('ตรวจ/ติดตั้งชุดเข้าปลายสาย (DE) วงจรล่างด้านนอก 2 ฝั่ง × 3 เฟส', '—', 6, 'ชุด', 'de:low');
+      it('ตรวจกำลังโครงสร้างและสายยึดโยง H-Frame รับแรงดึงด้านเดียว', '—', 2, 'ชุด', 'de:guy');
     } else if (P.mode === 3) {
       const sp = S.span115;
       sec('งานรื้อถอน');
@@ -847,7 +882,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   };
 
   // URL hash picks a starting step/view (used for printable stills): #s0-v3d etc.; #boq opens the BOQ
-  const h = (location.hash || '').match(/^#s([0-3])-(v3d|vtop|vroad|vside|v22|vunder|vdet)$/);
+  const h = (location.hash || '').match(/^#s([0-4])-(v3d|vtop|vroad|vside|v22|vunder|vdet|vdeS|vdeN)$/);
   if (h) P.mode = +h[1];
   rebuild(); go(h ? h[2] : 'v3d', true);
   if ((location.hash || '') === '#boq') { P.mode = 2; rebuild(); document.getElementById('boqv').hidden = false; renderBoq(); }
