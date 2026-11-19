@@ -25,7 +25,8 @@ body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--f-body); }
 #c { display: block; width: 100%; height: 100%; touch-action: none; }
 .modes { position: absolute; top: max(12px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); right: 12px;
   display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
-.modes button, .views button { pointer-events: auto; }
+.modes button, .views button, .views select { pointer-events: auto; }
+.views select { font: 600 14px var(--f-body); border: 1px solid var(--line); background: var(--panel); color: var(--fg); padding: 6px 8px; border-radius: 6px; max-width: 260px; }
 button { font: 600 14px var(--f-body); border: 1px solid var(--line); background: var(--panel); color: var(--fg);
   padding: 6px 12px; border-radius: 6px; cursor: pointer; }
 button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -107,7 +108,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="vside">มองข้ามห้วย</button>
       <button id="v22">มองแนว 22 kV</button>
       <button id="vunder">ใต้สะพาน</button>
-      <button id="vdet">ซูมหัวเสา</button>
+      <select id="poleSel" aria-label="ซูมไปที่หัวเสา" title="หรือดับเบิลคลิกที่เสาในโมเดล"><option value="">ซูมหัวเสา…</option></select>
       <a href="parts.html">ชุดอุปกรณ์ตามแบบ</a>
     </div>
     <div id="boqv" hidden>
@@ -563,6 +564,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
 
   // ---------- build the poles and lines for the current mode ----------
   const polesG = new THREE.Group(); scene.add(polesG);
+  const POLES = [];                                      // pole groups with userData.pole = { name, kind, top } for zooming
   let S = {};                                            // results for the status panel
   function buildPoles() {
     polesG.clear(); S = {};
@@ -571,17 +573,19 @@ table.ph th { color: var(--muted); font-weight: 600; }
     // ---- 115 kV line on LT ----
     let line115 = P115.slice(), sMoved = null;
     if (mode === 3) { sMoved = [num('mvA'), Z(num('mvO'))]; line115 = [P115[0], sMoved, P115[2], P115[3]]; }
+    POLES.length = 0;
+    const tag = (g, name, kind, top) => { g.userData.pole = { name, kind, top }; POLES.push(g); return g; };
     const names = ['115 kV ฝั่งใต้ ต้นถัดไป', '115 kV ฝั่งใต้ (หัวสะพาน)', '115 kV ฝั่งเหนือ (หัวสะพาน)', '115 kV ฝั่งเหนือ ต้นถัดไป'];
     P115.forEach(([x, z], i) => {
       let m = mat.pole;
       if (mode >= 1 && i === 1) m = mode === 3 ? mat.poleGhost : mat.poleBad;
       if (mode >= 1 && i === 2) m = mat.poleWarn;
-      tall(x, z, m, polesG);
+      tag(tall(x, z, m, polesG), `${names[i]} along ${fmt(x)}`, 'hv', POLE_TOP);
       if (mode >= 1 && i === 1) { ring(x, z, 1.4, 0xc0262d, polesG); put(polesG, mode === 3 ? 'รื้อถอน' : 'อยู่ในแผ่นพื้นทางเข้า ต้องย้าย', x, gy() + 22, z, BAD); }
       if (mode >= 1 && i === 2) { ring(x, z, 1.4, 0xe5934d, polesG); const e = edgeW(x);
         hdim(x, -e, z, 1.0, `ห่างขอบถนน ${fmt(-z - e)} ม.`, WARN, polesG); put(polesG, 'ใกล้ขอบถนน / ลาดคันทาง', x, gy() + 22, z, WARN); }
     });
-    if (sMoved) { tall(sMoved[0], sMoved[1], mat.poleNew, polesG); put(polesG, `เสา 115 kV ตำแหน่งใหม่ (ค่าสมมติ)`, sMoved[0], gy() + 22, sMoved[1], NEW); }
+    if (sMoved) { tag(tall(sMoved[0], sMoved[1], mat.poleNew, polesG), `115 kV ตำแหน่งใหม่ along ${fmt(sMoved[0])} (ค่าสมมติ)`, 'hv', POLE_TOP); put(polesG, `เสา 115 kV ตำแหน่งใหม่ (ค่าสมมติ)`, sMoved[0], gy() + 22, sMoved[1], NEW); }
     const hvM = (i) => mode === 3 && i <= 1 ? lineMat.neuHv : lineMat.hv;
     const pts = line115.map(([x, z]) => hvPts(x, z));
     // beyond the model edge
@@ -608,9 +612,9 @@ table.ph th { color: var(--muted); font-weight: 600; }
 
     // ---- 22 kV H-Frames on RT + the single pole from the plan ----
     const low = { h: pl.hL, dz: pl.low };
-    HF.forEach(([x, z], i) => { hframe(x, z, mat.pole, polesG, pl.hT, low);
+    HF.forEach(([x, z], i) => { tag(hframe(x, z, mat.pole, polesG, pl.hT, low), `H-Frame 22 kV ${i ? 'ฝั่งเหนือ' : 'ฝั่งใต้'} along ${fmt(x)}`, 'hf', pl.hT + 0.15);
       put(polesG, mode === 2 ? 'ใช้ H-Frame เดิม' : 'H-Frame 22 kV 2 วงจร', x, gy() + pl.hT + 2.2, z, mode === 2 ? NEW : { size: 1.5, color: '#6b4a1d' }); });
-    single(DOH.p22[0], Z(DOH.p22[1]), mat.pole, 10, polesG);
+    tag(single(DOH.p22[0], Z(DOH.p22[1]), mat.pole, 10, polesG), `เสา 22 kV along ${fmt(DOH.p22[0])}`, 'mv', 10);
     put(polesG, 'เสา 22 kV (แปลน ทล.)', DOH.p22[0], gy() + 12.2, Z(DOH.p22[1]), { size: 1.2 });
     // lines beyond the H-Frames
     const out = (i, dz, h, m, sg) => { const x = HF[i][0], xe = i ? EXT : -EXT, z = HF[i][1] + dz; polesG.add(wire(V(x, gy() + h, z), V(xe, gy() + h, z), sg, m, 0.035)); };
@@ -718,7 +722,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   document.getElementById('hwlOn').addEventListener('change', e => { hwlG.visible = e.target.checked; });
 
   function rebuild() {
-    buildTerrain(); buildOld(); buildNew(); buildROW(); buildPoles(); buildGIS();
+    buildTerrain(); buildOld(); buildNew(); buildROW(); buildPoles(); buildGIS(); fillPoleSel();
     oldG.visible = P.mode === 0; newG.visible = P.mode >= 1;
     document.getElementById('secMove').style.display = P.mode === 3 ? '' : 'none';
     status();
@@ -751,7 +755,27 @@ table.ph th { color: var(--muted); font-weight: 600; }
     if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) { camera.position.set(...p); controls.target.set(...t); controls.update(); return; }
     tween = { from: camera.position.clone(), to: V(...p), tf: controls.target.clone(), tt: V(...t), k: 0 };
   }
-  for (const id of Object.keys(views)) document.getElementById(id).addEventListener('click', () => go(id));
+  for (const id of Object.keys(views)) { const b = document.getElementById(id); if (b) b.addEventListener('click', () => go(id)); }
+  // ---------- zoom to a pole head: picker in the view bar, or double-click a pole ----------
+  const poleSel = document.getElementById('poleSel');
+  function fillPoleSel() {
+    const cur = poleSel.selectedIndex > 0 ? poleSel.options[poleSel.selectedIndex].text : '';
+    poleSel.innerHTML = '<option value="">ซูมหัวเสา…</option>' + POLES.map((g, i) => `<option value="${i}">${g.userData.pole.name}</option>`).join('');
+    const k = POLES.findIndex(g => g.userData.pole.name === cur); poleSel.value = k >= 0 ? String(k) : '';
+  }
+  function zoomPole(g) {
+    const { kind, top } = g.userData.pole, b = g.position, y = b.y + top;
+    const [o, t] = kind === 'hv' ? [[9, 0.5, 10], [0, -3.5, 1.2]] : kind === 'hf' ? [[11, 1.5, 7], [0, -1.2, 0]] : [[5, 0.5, 5], [0, -1, 0]];
+    views._pole = [[b.x + o[0], y + o[1], b.z + o[2]], [b.x + t[0], y + t[1], b.z + t[2]]]; go('_pole');
+  }
+  poleSel.addEventListener('change', () => { const g = POLES[+poleSel.value]; if (g) zoomPole(g); });
+  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+  canvas.addEventListener('dblclick', e => {
+    const r = canvas.getBoundingClientRect(); mouse.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+    ray.setFromCamera(mouse, camera);
+    for (const hit of ray.intersectObjects(POLES, true)) { let o = hit.object; while (o && !(o.userData && o.userData.pole)) o = o.parent;
+      if (o) { zoomPole(o); poleSel.value = String(POLES.indexOf(o)); return; } }
+  });
 
   // ================= BOQ =================
   const BOM = {
@@ -838,7 +862,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     if (tween) { tween.k = Math.min(1, tween.k + 0.045); const e = 1 - Math.pow(1 - tween.k, 3);
       camera.position.lerpVectors(tween.from, tween.to, e); controls.target.lerpVectors(tween.tf, tween.tt, e); if (tween.k >= 1) tween = null; }
     controls.update();
-    scene.traverse(o => { if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = d > 12; } });
+    scene.traverse(o => { if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = d > 17; } });
     renderer.render(scene, camera); requestAnimationFrame(loop);
   })();
   window.__ready = true; window.__S = () => S;
