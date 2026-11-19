@@ -102,6 +102,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="m3" data-mode="3">4 ทางเลือก: ย้ายเสา 115 kV ฝั่งใต้</button>
       <button id="m4" data-mode="4">5 ตัด DE วงจรล่าง H-Frame</button>
       <button id="m5" data-mode="5">6 จัดเฟส ACSR ใหม่ (เสนอ)</button>
+      <button id="m6" data-mode="6">7 เครื่องเจาะเสาเข็ม</button>
     </div>
     <div class="views" role="group" aria-label="มุมมอง">
       <button id="v3d">มุม 3D</button>
@@ -110,6 +111,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="vside">มองข้ามห้วย</button>
       <button id="v22">มองแนว 22 kV</button>
       <button id="vunder">ใต้สะพาน</button>
+      <button id="vrig" hidden>เครื่องเจาะ</button>
       <button id="vdeS" hidden>H-Frame ใต้ (วงจรล่าง)</button>
       <button id="vdeN" hidden>H-Frame เหนือ (วงจรล่าง)</button>
       <select id="poleSel" aria-label="ซูมไปที่หัวเสา" title="หรือดับเบิลคลิกที่เสาในโมเดล"><option value="">ซูมหัวเสา…</option></select>
@@ -178,6 +180,19 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <p class="assume">ค่าสมมติทั้งหมด: ความสูงตั้งต้นจากแบบ 2221 (คอนบน 13.85 ม.) วงจรล่าง 1.60 ม. ใต้คอนบน ตำแหน่งทางราบวัดจากกึ่งกลาง H-Frame (+ ออกจากถนน) ระยะหย่อนประมาณจากตัวอย่าง ACSR 185 ในคู่มือข้ามแม่น้ำหรือถนน ต้องวัดจริงในการสำรวจร่วม</p>
       </div>
       <p class="note">เกณฑ์: สายเปลือยเหนือพื้นสะพาน/ผิวทาง 6.10 ม. และ 7.50 ม. ระยะทางราบถึงขอบสะพาน 1.80 ม. (ตารางระยะห่างทางไฟฟ้า SA2-015/45017)</p>
+    </section>
+
+    <section id="secRig">
+      <h2>เครื่องเจาะเสาเข็ม (ขั้นที่ 7)</h2>
+      <div class="field"><label for="rigH">ความสูงเครื่องเจาะจากพื้น (ม.)</label><output id="rigHo"></output>
+        <input id="rigH" type="range" min="6" max="32" step="0.5" value="18"></div>
+      <div class="calc">
+        <label for="rigAt">ตำแหน่งที่ตั้งเครื่อง</label><select id="rigAt"></select>
+        <label for="safe22">ระยะปลอดภัยจากสาย 22 kV (ม.)</label><input id="safe22" type="number" step="0.1" placeholder="กรอก">
+        <label for="safe115">ระยะปลอดภัยจากสาย 115 kV (ม.)</label><input id="safe115" type="number" step="0.1" placeholder="กรอก">
+        <p class="assume">ค่าตั้งต้น 18.0 ม. คือความสูงสูงสุดของเครื่องตัวอย่าง BAUER BG 15 H ตามโบรชัวร์ผู้ผลิต ไม่ใช่เครื่องที่ผู้รับจ้างจะใช้ ให้แก้ตามเครื่องจริง ระยะปลอดภัยยังไม่กรอกให้ เพราะยังหาตารางในกฎหมายไทยที่ยืนยันได้ไม่พบ ให้กรอกตามกฎกระทรวงหรือข้อกำหนด กฟภ.</p>
+      </div>
+      <p class="note">วางเสาเจาะ (mast) ตั้งตรงเหนือเข็มต้นนอกสุดด้านที่ติดแนวสาย (แบบ ทล.: ตอม่อกลาง 7 ต้น @ 1.78 ม. ริมฝั่ง 9 ต้น @ 1.54 ม.) ตั้งบนระดับดินตามรูปตัดตามยาว ใช้สายตามสภาพปัจจุบันก่อนย้าย ระยะวัดจากแกนเสาเจาะ ไม่รวมความกว้างเสาเจาะ การเอียง และสายแกว่ง</p>
     </section>
 
     <section id="secArr">
@@ -383,7 +398,9 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const BAD = { color: '#fff', bg: 'rgba(192,38,45,.92)' }, WARN = { color: '#3d1f00', bg: 'rgba(245,190,120,.95)', border: '#b4560f' },
     NEW = { color: '#0f5a31', border: '#1f9a55' };
   const spanPt = (a, b, sag, t) => new THREE.Vector3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t - 4 * sag * t * (1 - t), a.z + (b.z - a.z) * t);
+  let REC = false; const CONDS = [];                     // conductors drawn by buildPoles (for the piling-rig check)
   function wire(a, b, sag, m, r = 0.05) {
+    if (REC && (m === lineMat.hv || m === lineMat.acsr || m === lineMat.sac)) CONDS.push({ a, b, sag, kv: m === lineMat.hv ? 115 : 22, name: m === lineMat.hv ? '115 kV' : m === lineMat.sac ? '22 kV SAC' : '22 kV' });
     const pts = []; for (let i = 0; i <= 32; i++) pts.push(spanPt(a, b, sag, i / 32));
     return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, r, 5), m);
   }
@@ -610,11 +627,54 @@ table.ph th { color: var(--muted); font-weight: 600; }
 
   // ---------- build the poles and lines for the current mode ----------
   const polesG = new THREE.Group(); scene.add(polesG);
+  // ---------- step 7: bored-pile rig at the outermost pile of each footing on the power-line side ----------
+  const rigG = new THREE.Group(); scene.add(rigG);
+  const RIG_SITES = (() => { const out = [], sup = [DOH.abut[0], ...DOH.piers, DOH.abut[1]];
+    for (const [br, zz] of [['LT.', [-13.35, -14.15]], ['RT.', [12.85, 13.65]]]) for (const a of sup) {
+      const ab = DOH.abut.includes(a), sg = a < 0 ? -1 : 1;
+      out.push({ name: `${br} ${ab ? (a < 0 ? 'ตอม่อริมฝั่งใต้' : 'ตอม่อริมฝั่งเหนือ') : 'ตอม่อ ' + fmt(a)}`, br, xs: ab ? [a + sg * 0.4, a + sg * 2.1] : [a - 0.9, a + 0.9], z: ab ? zz[1] : zz[0] }); }
+    return out; })();
+  let CP = [];
+  function rigEval(x, z, H) {   // vertical mast from ground at (x, z) up to H: nearest conductor and the highest mast that keeps the safe distance
+    const y0 = gndAt(x) - DOH.deck, top = y0 + H, s22 = num('safe22'), s115 = num('safe115');
+    let best = { d: Infinity }, hMax = Infinity;
+    for (const q of CP) {
+      const dh = Math.hypot(q.p.x - x, q.p.z - z), dy = q.p.y > top ? q.p.y - top : q.p.y < y0 ? y0 - q.p.y : 0, d = Math.hypot(dh, dy);
+      if (d < best.d) best = { d, q, at: V(x, Math.min(Math.max(q.p.y, y0), top), z) };
+      const sf = q.kv === 115 ? s115 : s22;
+      if (sf > 0 && dh < sf && q.p.y > y0) hMax = Math.min(hMax, q.p.y - Math.sqrt(sf * sf - dh * dh) - y0);
+    }
+    return { ...best, y0, hMax, sf: best.q ? (best.q.kv === 115 ? s115 : s22) : NaN };
+  }
+  function siteEval(st, H) { return st.xs.map(x => rigEval(x, st.z, H)).reduce((a, b) => (b.d < a.d ? Object.assign(b, { hMax: Math.min(a.hMax, b.hMax) }) : Object.assign(a, { hMax: Math.min(a.hMax, b.hMax) }))); }
+  const rigSel = document.getElementById('rigAt');
+  rigSel.innerHTML = '<option value="auto">จุดที่ใกล้สายที่สุด (อัตโนมัติ)</option>' + RIG_SITES.map((st, i) => `<option value="${i}">${st.name}</option>`).join('');
+  function buildRig() {
+    rigG.clear(); S.rig = null;
+    CP = CONDS.flatMap(c => { const r = []; for (let k = 0; k <= 240; k++) r.push({ p: spanPt(c.a, c.b, c.sag, k / 240), kv: c.kv, name: c.name }); return r; });
+    if (P.mode !== 6) return;
+    const H = num('rigH'), all = RIG_SITES.map(st => ({ st, e: siteEval(st, H) }));
+    const pick = rigSel.value === 'auto' ? all.reduce((a, b) => (b.e.d < a.e.d ? b : a)) : all[+rigSel.value];
+    S.rig = { H, all, pick };
+    const { st, e } = pick, x = e.at.x, z = st.z, side = st.br === 'LT.' ? 1 : -1, y0 = e.y0;   // body sits towards the road centre
+    const Y = M(0xe0a020), D = M(0x3a3a3a), g = new THREE.Group(); g.position.set(x, y0, z); rigG.add(g);
+    for (const t of [-1.25, 1.25]) box(4.8, 0.9, 0.8, D, 0, 0.45, side * 2.6 + t, g);                         // crawler tracks (ค่าสมมติ)
+    box(4.0, 2.2, 2.8, Y, 0, 2.0, side * 2.6, g); box(1.6, 1.6, 1.4, D, 1.0, 3.6, side * 2.0, g);             // upper body + cab
+    box(0.7, H - 0.5, 0.7, Y, 0, 0.5 + (H - 0.5) / 2, 0, g); box(0.25, Math.max(H - 3, 1), 0.25, M(0x777777), 0, 1.5 + Math.max(H - 3, 1) / 2, 0.55, g);   // mast + kelly bar
+    box(0.9, 0.5, 0.9, Y, 0, H - 0.25, 0, g);
+    const near = e.d < e.sf;
+    put(rigG, `เครื่องเจาะ สูง ${fmt(H)} ม. (${st.name})`, x, y0 + H + 1.6, z, { size: 1.2, color: '#5a3d00', border: '#e0a020' });
+    if (e.q) { line([e.at, e.q.p], near ? lineMat.dimBad : lineMat.dim, rigG);
+      put(rigG, `ห่าง ${e.q.name} ${f2(e.d)} ม.`, (e.at.x + e.q.p.x) / 2, (e.at.y + e.q.p.y) / 2 + 0.6, (e.at.z + e.q.p.z) / 2, near ? BAD : e.sf > 0 ? NEW : { size: 1.2 }); }
+    if (isFinite(e.hMax)) { const r = new THREE.Mesh(new THREE.RingGeometry(0.8, 1.0, 32), new THREE.MeshBasicMaterial({ color: 0x1f9a55, side: THREE.DoubleSide }));
+      r.rotation.x = -Math.PI / 2; r.position.set(x, y0 + Math.max(e.hMax, 0), z); rigG.add(r);
+      put(rigG, `สูงได้ไม่เกิน ${f2(Math.max(e.hMax, 0))} ม.`, x, y0 + Math.max(e.hMax, 0) + 0.8, z - side * 2, NEW); }
+  }
   const POLES = [];                                      // pole groups with userData.pole = { name, kind, top } for zooming
   let S = {};                                            // results for the status panel
   function buildPoles() {
-    polesG.clear(); S = {};
-    const mode = P.mode, sagT = L => sagAt(L, num('tA')) || 0.5;
+    polesG.clear(); S = {}; CONDS.length = 0; REC = true;
+    const mode = P.mode === 6 ? 1 : P.mode, sagT = L => sagAt(L, num('tA')) || 0.5;
     const pl = plan22(); S.pl = pl;
     // ---- 115 kV line on LT ----
     let line115 = P115.slice(), sMoved = null;
@@ -741,6 +801,16 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const rowTxt = o => Math.abs(o) <= P.ROW / 2 ? 'อยู่ในเขตทาง (ค่าสมมติ)' : '<span class="st-warn">อยู่นอกเขตทาง (ค่าสมมติ)</span>';
     const v115 = num('v115');
     const hfEdge = HF.map(([x, z], i) => { const poles = i ? DOH.hfN : DOH.hfS; return Math.min(...poles.map(([px, o]) => -o - edgeE(px))); });
+    if (P.mode === 6 && S.rig) {
+      const { H, all, pick } = S.rig, e = pick.e, sf = e.sf, hm = v => isFinite(v) ? f2(Math.max(v, 0)) : '-';
+      el.innerHTML = `<div class="big ${sf > 0 ? (e.d >= sf ? 'st-ok' : 'st-bad') : 'st-warn'}">เครื่องเจาะสูง ${fmt(H)} ม. ที่ ${pick.st.name}</div>` +
+        `<div>ระยะจากเสาเจาะถึงสายใกล้สุด (${e.q ? e.q.name : '-'}) ${f2(e.d)} ม. ${sf > 0 ? `เกณฑ์ ${f2(sf)} ม. ${ok(e.d >= sf)} ความสูงเครื่องที่ยอมได้ ${hm(e.hMax)} ม.` : '<span class="st-warn">ยังไม่ได้กรอกระยะปลอดภัย</span>'}</div>` +
+        `<div style="color:var(--muted);font-size:13px">ตั้งบนดินระดับ ${f2(e.y0 + DOH.deck)} ม. (รูปตัดตามยาว) ใช้สายตามสภาพปัจจุบันก่อนย้าย</div>` +
+        '<table class="ph"><tr><th>ตำแหน่ง (เข็มต้นนอกสุด)</th><th>สายใกล้สุด</th><th>ระยะ</th><th>สูงได้ไม่เกิน</th></tr>' +
+        all.map(({ st, e }) => `<tr><td>${st.name}</td><td>${e.q ? e.q.name : '-'}</td><td>${e.sf > 0 ? `<span class="${e.d >= e.sf ? 'st-ok' : 'st-bad'}">${f2(e.d)}</span>` : f2(e.d)}</td><td>${hm(e.hMax)}</td></tr>`).join('') + '</table>' +
+        `<div style="color:var(--warn)">ต้องตรวจ: รุ่นและความสูงเครื่องที่ผู้รับจ้างใช้, ตำแหน่งตั้งเครื่องและทิศหมุนตัวเครื่อง, การยก kelly/ปลอกเหล็ก, ระยะปลอดภัยตามกฎหมาย และแผนดับไฟหรือหุ้มฉนวนสาย</div>`;
+      return;
+    }
     if (P.mode === 0) {
       el.innerHTML = `<div class="big">สภาพปัจจุบัน</div><div>สะพานเดิม Plank girder 15 × 10 = 150 ม. (ตำแหน่ง/ระดับในโมเดลเป็นค่าสมมติ) ฝั่งตะวันตก 115 kV วงจรเดี่ยว สายคู่ 2 × 400 ตร.มม. มี 22 kV พาดใต้ ช่วงข้าม ${fmt(L115)} ม. (เสา along ${fmt(P115[1][0])} ถึง ${fmt(P115[2][0])}) ฝั่งตะวันออก H-Frame 22 kV วงจรบน ACSR วงจรล่าง 120 SAC ช่วง ${fmt(L22)} ม. ตำแหน่งเสาตามแปลน ทล.</div>`;
     } else if (P.mode === 1) {
@@ -809,8 +879,9 @@ table.ph th { color: var(--muted); font-weight: 600; }
   document.getElementById('hwlOn').addEventListener('change', e => { hwlG.visible = e.target.checked; });
 
   function rebuild() {
-    buildTerrain(); buildOld(); buildNew(); buildROW(); buildPoles(); buildGIS(); fillPoleSel();
+    buildTerrain(); buildOld(); buildNew(); buildROW(); buildPoles(); REC = false; buildRig(); buildGIS(); fillPoleSel();
     oldG.visible = P.mode === 0; newG.visible = P.mode >= 1;
+    document.getElementById('secRig').style.display = P.mode === 6 ? '' : 'none'; document.getElementById('vrig').hidden = P.mode !== 6;
     document.getElementById('secMove').style.display = P.mode === 3 ? '' : 'none';
     document.getElementById('secArr').style.display = P.mode === 5 ? '' : 'none';
     for (const id of ['vdeS', 'vdeN']) document.getElementById(id).hidden = P.mode !== 4 && P.mode !== 5;
@@ -823,10 +894,10 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const bind = (id, key) => { const i = document.getElementById(id), o = document.getElementById(id + 'o');
     const upd = () => { P[key] = parseFloat(i.value); o.textContent = fmt(P[key]); };
     upd(); i.addEventListener('input', () => { upd(); rebuild(); }); };
-  bind('row', 'ROW'); bind('low', 'low');
+  bind('row', 'ROW'); bind('low', 'low'); bind('rigH', 'rigH');
   document.getElementById('g0').addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { P.g0 = v; rebuild(); } });
   document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => { P.mode = +b.dataset.mode; rebuild(); }));
-  for (const id of ['cw', 'ca', 'ce', 'cal', 'ch', 'tA', 'cd', 'cu', 'tmin', 'tavg', 'qc', 'v115', 'hTop', 'hLow', 'dzTop', 'dzLow', 'sag22', 'sagSac', 'mvA', 'mvO', 'x3On', 'x3dz', 'x3h', 'sepMin'])
+  for (const id of ['cw', 'ca', 'ce', 'cal', 'ch', 'tA', 'cd', 'cu', 'tmin', 'tavg', 'qc', 'v115', 'hTop', 'hLow', 'dzTop', 'dzLow', 'sag22', 'sagSac', 'mvA', 'mvO', 'x3On', 'x3dz', 'x3h', 'sepMin', 'rigAt', 'safe22', 'safe115'])
     document.getElementById(id).addEventListener('input', rebuild);
 
   const views = {
@@ -841,6 +912,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
     vdet: [[P115[0][0] + 9, 19.5, P115[0][1] + 10], [P115[0][0], 16.5, P115[0][1] + 1.2]],
   };
   let tween = null;
+  Object.defineProperty(views, 'vrig', { get() { const r = S.rig; if (!r) return views.v3d; const { st, e } = r.pick, sd = st.br === 'LT.' ? -1 : 1;
+    return [[e.at.x + 28, e.y0 + r.H * 0.7, st.z + sd * 30], [e.at.x, e.y0 + r.H * 0.55, st.z]]; } });
   function go(name, instant) {
     const [p, t] = views[name];
     if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) { camera.position.set(...p); controls.target.set(...t); controls.update(); return; }
@@ -923,7 +996,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   function renderBoq() {
     const T = document.getElementById('boqT');
     document.querySelectorAll('#boqv [data-bm]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.bm === P.mode)));
-    if (P.mode < 2) { document.getElementById('boqTitle').textContent = 'ปริมาณงาน (BOQ)';
+    if (P.mode < 2 || P.mode === 6) { document.getElementById('boqTitle').textContent = 'ปริมาณงาน (BOQ)';
       T.innerHTML = '<tr><td>เลือกขั้นที่ 3 หรือ 4 ด้านบนก่อน (ขั้นที่ 1–2 ยังไม่มีงานก่อสร้าง)</td></tr>'; document.getElementById('boqNote').textContent = ''; return; }
     document.getElementById('boqTitle').textContent = 'ปริมาณงาน (BOQ): ' + MODE_N[P.mode];
     const R = boqRows(); let no = 0;
@@ -954,7 +1027,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   };
 
   // URL hash picks a starting step/view (used for printable stills): #s0-v3d etc.; #boq opens the BOQ
-  const h = (location.hash || '').match(/^#s([0-5])-(v3d|vtop|vroad|vside|v22|vunder|vdet|vdeS|vdeN)$/);
+  const h = (location.hash || '').match(/^#s([0-6])-(v3d|vtop|vroad|vside|v22|vunder|vdet|vdeS|vdeN|vrig)$/);
   if (h) P.mode = +h[1];
   rebuild(); go(h ? h[2] : 'v3d', true);
   if ((location.hash || '') === '#boq') { P.mode = 2; rebuild(); document.getElementById('boqv').hidden = false; renderBoq(); }
