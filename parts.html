@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ชุดอุปกรณ์ตามแบบ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Same tokens as index.html: list of assemblies on the left, a SketchUp-like close-up with leader labels on the right */
+:root {
+  --bg: #eef1f0; --panel: #fbfcfb; --fg: #1d2622; --muted: #5d6b64; --line: #d3dad6;
+  --accent: #5b2a86; --warn: #b4560f;
+  --f-body: "Sarabun", "Leelawadee UI", "Tahoma", sans-serif;
+  --f-head: "IBM Plex Sans Thai", "Sarabun", sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121715; --panel: #1a201d; --fg: #e4ebe7; --muted: #95a39b; --line: #2e3833;
+  --accent: #b48ce0; --warn: #e5934d; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121715; --panel: #1a201d; --fg: #e4ebe7; --muted: #95a39b; --line: #2e3833;
+  --accent: #b48ce0; --warn: #e5934d; color-scheme: dark }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--f-body); }
+.app { display: grid; grid-template-columns: 320px minmax(0, 1fr); height: 100%; }
+aside { background: var(--panel); border-right: 1px solid var(--line); overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+h1 { font: 700 18px/1.3 var(--f-head); margin: 0; }
+.sub { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+a.back { color: var(--accent); font-weight: 600; text-decoration: none; font-size: 14px; }
+.list { display: flex; flex-direction: column; gap: 6px; }
+.list button { text-align: left; font: 600 14px var(--f-body); border: 1px solid var(--line); background: var(--bg); color: var(--fg);
+  padding: 8px 10px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.list button span { font: 500 12px var(--f-num); color: var(--muted); white-space: nowrap; }
+.list button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.info h2 { font: 700 16px var(--f-head); margin: 0 0 6px; }
+.info ul { margin: 0; padding-left: 18px; font-size: 14px; }
+.info li { margin: 2px 0; }
+.info .ref { font: 500 13px var(--f-num); color: var(--muted); margin: 0 0 6px; }
+.info h3 { font: 600 13px var(--f-body); color: var(--warn); margin: 10px 0 2px; }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+.stage { position: relative; min-width: 0; min-height: 0; background: #f6f7f6; }
+#c { display: block; width: 100%; height: 100%; touch-action: none; }
+svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.callouts { position: absolute; inset: 0; pointer-events: none; }
+.co { position: absolute; font: 600 13px/1.25 var(--f-body); color: #1d2622; background: rgba(255,255,255,.92); border: 1px solid #b8c0bb;
+  padding: 8px 10px; border-radius: 4px; max-width: 230px; }
+.tools { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.tools button { font: 600 13px var(--f-body); border: 1px solid #c9d0cc; background: #fff; color: #1d2622; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+.tools button[aria-pressed="true"] { background: #5b2a86; border-color: #5b2a86; color: #fff; }
+.err { position: absolute; inset: 0; display: grid; place-items: center; color: #5d6b64; padding: 20px; text-align: center; }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; height: auto; }
+  .stage { order: -1; height: 62vh; }
+  aside { border-right: 0; border-top: 1px solid var(--line); padding: 14px 16px; }
+  .co { font-size: 11.5px; max-width: 140px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div>
+      <a class="back" href="index.html">← กลับโมเดลหน้างาน</a>
+      <h1>ชุดอุปกรณ์หัวเสาตามแบบมาตรฐาน กฟภ.</h1>
+      <p class="sub">ปั้นด้วย Blender จากระยะในแบบ ชุดเดียวกับที่ใช้ในโมเดลหน้างาน ลากเพื่อหมุน เลื่อนล้อเพื่อซูม</p>
+    </div>
+    <div class="list" id="list" role="group" aria-label="ชุดอุปกรณ์"></div>
+    <div class="info" id="info"></div>
+    <p class="note">ระยะที่ไม่มีในแบบเขียนว่า "ค่าสมมติ" ใช้วาดภาพเท่านั้น การตรวจระยะในโมเดลหน้างานใช้ค่าในแผงคำนวณ ไม่ได้อ่านจากภาพนี้</p>
+  </aside>
+  <div class="stage">
+    <canvas id="c" aria-label="ภาพ 3 มิติชุดอุปกรณ์"></canvas>
+    <svg id="lead" aria-hidden="true"></svg>
+    <div class="callouts" id="co"></div>
+    <div class="tools">
+      <button id="tHead" aria-pressed="true">หัวเสา</button>
+      <button id="tWhole" aria-pressed="false">ทั้งต้น</button>
+      <button id="tLbl" aria-pressed="true">ป้ายชื่อ</button>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="assets/pea_parts.js"></script>
+<script>
+(async function () {
+  // pole height above ground (m), pole offsets and shaft radii, and where each head is used in the site model
+  const INFO = {
+    HF2221: { ref: 'แบบ 2221 (ช่วง 200–350 ม.)', h: 14, poles: [-1.5, 1.5], r: [0.16, 0.24],
+      dims: ['เสา คอร. 16 ม. ฝัง 2.0 ม. สูงพ้นดิน 14.0 ม.', 'เสาห่างกัน 3,000 มม.', 'คอนเหล็กรางคู่ยาว 6,000 มม. ต่ำจากยอด 150 มม.',
+        'ระยะเฟส 2,900 มม.', 'เหล็กค้ำ X ที่ 2,650–5,150 และ 5,950–8,500 มม. จากยอด'],
+      assumed: ['คอนชั้นที่ 2 (GIS ระบุ 2 วงจร) ต่ำลง 1,600 มม.', 'ขนาดราง 150×75×6.5 ยืมจากแบบ 2222'],
+      use: 'H-Frame 22 kV เดิมฝั่ง RT. ตาม GIS และ H-Frame ยึดปลายสายใหม่' },
+    SDTG3: { ref: 'แบบ 5264A (SD-TG-3)', h: 20, poles: [0], r: [0.2, 0.35],
+      dims: ['เสา คอร. 22 ม. ฝัง 2.0 ม. (ริมทางหลวง 2.3 ม.)', 'คอน 115 kV ต่ำจากยอด 200 / 2,500 / 2,500 มม.', 'คอน 22 kV ต่ำจากคอนล่าง 4,950 มม.',
+        'คอนราง 100×50×5×2,250 ค้ำ 50×50×6×1,000', 'ลูกถ้วยแขวน 52-3 จาน 254×146 มม. 7 ลูกต่อเฟส'],
+      assumed: ['ระยะสายคู่ 400 มม. และความยาวอุปกรณ์ต่อลูกถ้วย', 'ตำแหน่งลูกถ้วย 22 kV บนคอน'],
+      use: 'เสา 115/22 kV เดิมฝั่ง LT. และเสาใหม่ (โมเดลใช้แบบทางตรงแทนทุกต้น)' },
+    T2314A: { ref: 'แบบ 2314A', h: 10, poles: [0], r: [0.12, 0.2],
+      dims: ['คอน คอร. อัดแรง 120×120×2,500 มม. 2 ท่อน (เข้าปลายสาย)', 'เหล็กประกับคอน 30×6×760 มม. 4 ชิ้น', 'ลูกถ้วยแขวน 52-1 3 ลูกต่อเฟส (รวม 9)',
+        'กับดักเสิร์จ 20 หรือ 24 kV 5 kA 3 ชุด', 'หัวเคเบิล 22 kV ภายนอกอาคาร 3 ชุด', 'สายสะพานต่ำจากคอน 450 มม. เคเบิลต่ำลงอีก 450 มม.'],
+      assumed: ['ความสูงเสาในโมเดล 10 ม. พ้นดิน', 'ตำแหน่งบนคอนและขนาดกับดักเสิร์จ/หัวเคเบิล'],
+      use: 'เสาเปลี่ยนจากสายเปลือยเป็น TAC ที่หัวสะพาน (ทางเลือก TAC เกาะสะพาน)' },
+    P2207: { ref: 'แบบ 2207 (ทางตรง 0–5°)', h: 12, poles: [0], r: [0.12, 0.2],
+      dims: ['คอน 100×100×2,500 มม.', 'เหล็กประกับคอน 30×6×760 มม. 2 ชิ้น', 'ลูกถ้วยก้านตรง 56-2 3 ลูก'],
+      assumed: ['ความสูงเสาในโมเดล 12 ม. พ้นดิน', 'ตำแหน่งลูกถ้วยบนคอน'],
+      use: 'เสากลางระหว่าง H-Frame เดิมกับเสาเปลี่ยนชนิดสาย' },
+    LV: { ref: 'ไม่มีแบบ (จากรูป ทล.)', h: 9, poles: [0], r: [0.12, 0.2], dims: [], assumed: ['ทั้งชุด'], use: 'เสาแรงต่ำข้างสะพาน (ไม่มีใน GIS)' },
+    LIGHT: { ref: 'ไม่มีแบบ (จากรูป ทล.)', h: 9, poles: [0], r: [0.08, 0.12], dims: [], assumed: ['ทั้งชุด'], use: 'เสาไฟส่องสว่างข้างสะพาน (ไม่มีใน GIS)' },
+  };
+  const stage = document.querySelector('.stage');
+  try { await document.fonts.load('600 14px "Sarabun"'); } catch (e) {}
+  if (!window.THREE || !THREE.GLTFLoader || !window.PEA_PARTS_B64) {
+    stage.insertAdjacentHTML('beforeend', '<div class="err">โหลดไลบรารีหรือไฟล์ชุดอุปกรณ์ไม่ได้</div>'); return; }
+
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf6f7f6);
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 400);
+  const controls = new THREE.OrbitControls(camera, canvas); controls.enableDamping = true;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa39a, 0.85));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.55); sun.position.set(20, 30, 25); scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.25); fill.position.set(-25, 10, -15); scene.add(fill);
+
+  const Ph = (c, sh) => new THREE.MeshPhongMaterial({ color: c, shininess: sh, specular: 0x4a4a4a });
+  const MAT = { concrete: new THREE.MeshLambertMaterial({ color: 0xc4c2bb }), galv: Ph(0x9aa3a8, 45), porcelain: Ph(0x6e3b20, 80),
+    polymer: Ph(0x7d858a, 20), red: Ph(0xc0392b, 30), cable: new THREE.MeshLambertMaterial({ color: 0x1b1b1b }), alu: Ph(0xc9cdd0, 60),
+    lamp: new THREE.MeshBasicMaterial({ color: 0xfff4cc }) };
+  const edge = new THREE.LineBasicMaterial({ color: 0x1f2427, transparent: true, opacity: 0.55 });
+
+  const bin = Uint8Array.from(atob(window.PEA_PARTS_B64), c => c.charCodeAt(0)).buffer;
+  const gl = await new Promise((ok, no) => new THREE.GLTFLoader().parse(bin, '', ok, no));
+  const heads = {};
+  for (const root of [...gl.scene.children]) {
+    const labels = [];
+    for (const o of [...root.children]) {
+      if (o.isMesh) { o.material = MAT[o.name.slice(root.name.length + 1)] || MAT.galv; o.add(new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 35), edge)); }
+      else { if (o.userData.t) labels.push({ text: o.userData.t, p: o.position.clone() }); root.remove(o); }
+    }
+    heads[root.name] = { root, labels, title: root.userData.title || root.name };
+  }
+
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.MeshLambertMaterial({ color: 0xdfe3dc }));
+  ground.rotation.x = -Math.PI / 2; scene.add(ground);
+  const grid = new THREE.GridHelper(18, 18, 0xc5cbc4, 0xd4d9d2); grid.position.y = 0.01; scene.add(grid);
+  const shaftM = new THREE.MeshLambertMaterial({ color: 0xc4c2bb });
+  let cur = null, group = null, head = null, whole = false, showLbl = true;
+
+  function show(name) {
+    cur = name; const I = INFO[name], hd = heads[name];
+    if (group) scene.remove(group);
+    group = new THREE.Group(); scene.add(group);
+    for (const z of I.poles) {
+      const s = new THREE.Mesh(new THREE.CylinderGeometry(I.r[0], I.r[1], I.h, 16), shaftM);
+      s.position.set(0, I.h / 2, z); s.add(new THREE.LineSegments(new THREE.EdgesGeometry(s.geometry, 35), edge)); group.add(s);
+    }
+    head = hd.root.clone(); head.position.y = I.h; group.add(head);
+    frame();
+    document.querySelectorAll('#list button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === name));
+    const li = a => a.map(t => `<li>${t}</li>`).join('');
+    document.getElementById('info').innerHTML = `<h2>${hd.title}</h2><p class="ref">${I.ref}</p>
+      <ul>${li(I.dims)}</ul>${I.assumed.length ? `<h3>ค่าสมมติ</h3><ul>${li(I.assumed)}</ul>` : ''}
+      <p class="note" style="margin-top:8px">ใช้ในโมเดล: ${I.use}</p>`;
+    try { history.replaceState(null, '', '#' + name); } catch (e) {}
+  }
+  function frame() {
+    const box = new THREE.Box3();
+    group.updateMatrixWorld(true);
+    if (whole) { head.traverse(o => { if (o.isMesh) box.expandByObject(o); }); box.expandByPoint(new THREE.Vector3(0, 0, 0)); }
+    else {   // labelled parts + pole top; ignores long leads (e.g. the arrester ground wire) that would shrink the head
+      const I = INFO[cur]; box.expandByPoint(new THREE.Vector3(0, I.h + 0.3, 0));
+      for (const l of heads[cur].labels) box.expandByPoint(l.p.clone().add(new THREE.Vector3(0, I.h, 0)));
+      box.expandByScalar(0.4);
+    }
+    const c = box.getCenter(new THREE.Vector3()), r = box.getSize(new THREE.Vector3()).length() / 2;
+    const d = r / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * (whole ? 0.95 : 1.1);
+    camera.position.copy(c).add(new THREE.Vector3(0.75, 0.42, 1).normalize().multiplyScalar(d));
+    controls.target.copy(c); controls.update();
+  }
+
+  const list = document.getElementById('list');
+  for (const k of Object.keys(INFO)) {
+    if (!heads[k]) continue;
+    const b = document.createElement('button'), no = INFO[k].ref.match(/\d{4}A?/);
+    b.dataset.k = k; b.innerHTML = `${heads[k].title.replace(/\s*\(.*\)$/, '')}<span>${no ? no[0] : '—'}</span>`;
+    b.addEventListener('click', () => show(k)); list.appendChild(b);
+  }
+  const tg = (id, on) => document.getElementById(id).setAttribute('aria-pressed', on);
+  document.getElementById('tHead').onclick = () => { whole = false; tg('tHead', true); tg('tWhole', false); frame(); };
+  document.getElementById('tWhole').onclick = () => { whole = true; tg('tHead', false); tg('tWhole', true); frame(); };
+  document.getElementById('tLbl').onclick = () => { showLbl = !showLbl; tg('tLbl', showLbl); };
+
+  // leader labels: anchors projected to screen, boxes stacked in a column on the nearer side
+  const svg = document.getElementById('lead'), coDiv = document.getElementById('co');
+  function callouts() {
+    svg.innerHTML = ''; coDiv.innerHTML = '';
+    if (!showLbl || !cur) return;
+    const W = stage.clientWidth, H = stage.clientHeight, I = INFO[cur], pts = [];
+    for (const l of heads[cur].labels) {
+      const v = l.p.clone().add(new THREE.Vector3(0, I.h, 0)).project(camera);
+      if (v.z > 1) continue;
+      pts.push({ text: l.text, x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H });
+    }
+    for (const side of ['L', 'R']) {
+      const s = pts.filter(p => (p.x < W / 2) === (side === 'L')).sort((a, b) => a.y - b.y);
+      let y = 12;
+      for (const p of s) {
+        const el = document.createElement('div'); el.className = 'co'; el.textContent = p.text; coDiv.appendChild(el);
+        const hgt = el.offsetHeight, top = Math.max(y, Math.min(p.y - hgt / 2, H - hgt - 56));
+        const left = side === 'L' ? 10 : W - el.offsetWidth - 10;
+        el.style.top = top + 'px'; el.style.left = left + 'px'; y = top + hgt + 6;
+        const ax = side === 'L' ? left + el.offsetWidth : left, ay = top + hgt / 2, kx = ax + (side === 'L' ? 14 : -14);
+        svg.insertAdjacentHTML('beforeend', `<polyline points="${ax},${ay} ${kx},${ay} ${p.x},${p.y}" fill="none" stroke="#3b4246" stroke-width="1"/><circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#3b4246"/>`);
+      }
+    }
+  }
+
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(r.height, 1); camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage); resize();
+  const first = (location.hash || '').slice(1);
+  show(heads[first] ? first : 'T2314A');
+  let last = '';
+  (function loop() {
+    controls.update(); renderer.render(scene, camera);
+    const key = camera.position.toArray().map(v => v.toFixed(2)).join() + stage.clientWidth + 'x' + stage.clientHeight + showLbl + cur;
+    if (key !== last) { last = key; callouts(); }
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>

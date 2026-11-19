@@ -1,0 +1,824 @@
+<title>ย้ายเสา ทล.222 กม.6+085</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 3D canvas fills the left, a narrow engineering control sheet on the right; stacks on phones */
+:root {
+  --bg: #eef1f0; --panel: #fbfcfb; --fg: #1d2622; --muted: #5d6b64; --line: #d3dad6;
+  --accent: #5b2a86;          /* PEA purple */
+  --ok: #1f7a46; --warn: #b4560f; --bad: #c0262d;
+  --f-body: "Sarabun", "Leelawadee UI", "Tahoma", sans-serif;
+  --f-head: "IBM Plex Sans Thai", "Sarabun", sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121715; --panel: #1a201d; --fg: #e4ebe7; --muted: #95a39b; --line: #2e3833;
+  --accent: #b48ce0; --ok: #57c486; --warn: #e5934d; --bad: #f06a6f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121715; --panel: #1a201d; --fg: #e4ebe7; --muted: #95a39b; --line: #2e3833;
+  --accent: #b48ce0; --ok: #57c486; --warn: #e5934d; --bad: #f06a6f; color-scheme: dark }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--f-body); }
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: 100%; }
+.stage { position: relative; min-width: 0; min-height: 0; }
+#c { display: block; width: 100%; height: 100%; touch-action: none; }
+.modes { position: absolute; top: max(12px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); right: 12px;
+  display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+.modes button, .views button { pointer-events: auto; }
+button { font: 600 14px var(--f-body); border: 1px solid var(--line); background: var(--panel); color: var(--fg);
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.views { position: absolute; bottom: 12px; left: max(12px, env(safe-area-inset-left, 0px)); display: flex; gap: 6px; flex-wrap: wrap; }
+.views a { pointer-events: auto; font: 600 14px var(--f-body); border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  padding: 6px 12px; border-radius: 6px; text-decoration: none; }
+#boqv { position: absolute; inset: 0; background: var(--bg); overflow: auto; padding: 56px 18px 24px; z-index: 5; }
+#boqv h2 { font: 700 18px var(--f-head); color: var(--fg); letter-spacing: 0; margin: 0 0 4px; }
+#boqv .lead { color: var(--muted); margin: 0 0 14px; max-width: 70ch; }
+table.boq { border-collapse: collapse; font-size: 13.5px; margin: 6px 0 14px; min-width: 760px; }
+table.boq th, table.boq td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: right; font-variant-numeric: tabular-nums; vertical-align: top; }
+table.boq th { color: var(--muted); font-weight: 600; }
+table.boq td:nth-child(2), table.boq th:nth-child(2), table.boq td:nth-child(3), table.boq th:nth-child(3) { text-align: left; }
+table.boq tr.sec td { font: 700 14px var(--f-head); padding-top: 12px; text-align: left; }
+table.boq tr.asm td { font-weight: 600; }
+table.boq tr.sub td:nth-child(2) { padding-left: 22px; color: var(--muted); }
+table.boq td.ref { font: 500 12px var(--f-num); color: var(--muted); }
+table.boq input { width: 104px; font: 500 13px var(--f-num); text-align: right; padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--fg); }
+table.boq tr.tot td { font-weight: 700; border-top: 2px solid var(--fg); }
+.boqbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.boqopen { width: 100%; margin-top: 8px; }
+.stamp { position: absolute; top: 56px; right: 12px; font: 12px var(--f-body); color: #33413a;
+  background: rgba(255,255,255,.82); padding: 4px 8px; border-radius: 4px; max-width: 60%; }
+aside { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto;
+  padding-block: 18px 28px; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 18px; }
+h1 { font: 700 20px/1.3 var(--f-head); margin: 0; text-wrap: balance; }
+h2 { font: 600 13px var(--f-head); letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+.sub { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
+.status { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; }
+.status .big { font: 700 17px var(--f-head); }
+.st-bad { color: var(--bad); } .st-ok { color: var(--ok); } .st-warn { color: var(--warn); }
+.field { display: grid; grid-template-columns: 1fr 64px; gap: 4px 10px; align-items: center; margin-bottom: 10px; }
+.field label { font-size: 14px; }
+.field input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.field output { font: 500 14px var(--f-num); text-align: right; font-variant-numeric: tabular-nums; }
+.legend { display: grid; gap: 6px; font-size: 14px; }
+.legend span { display: inline-block; width: 22px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+.note { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+.note b { color: var(--warn); font-weight: 600; }
+.calc { display: grid; grid-template-columns: 1fr 120px; gap: 6px 10px; align-items: center; font-size: 14px; }
+.calc input, .calc select { width: 100%; font: 500 14px var(--f-num); padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); box-sizing: border-box; }
+.res { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 10px; }
+.res th, .res td { border-bottom: 1px solid var(--line); padding: 4px 2px; text-align: right; font-variant-numeric: tabular-nums; }
+.res th:first-child, .res td:first-child { text-align: left; }
+.res th { color: var(--muted); font-weight: 600; }
+.chk { font-size: 13.5px; margin-top: 8px; display: grid; gap: 3px; }
+dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; font-size: 13.5px; }
+dt { color: var(--muted); } dd { margin: 0; }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 62vh auto; height: auto; }
+  aside { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+  .stamp { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+table.ph { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 6px; }
+table.ph th, table.ph td { border-bottom: 1px solid var(--line); padding: 3px 2px; text-align: right; font-variant-numeric: tabular-nums; }
+table.ph th:first-child, table.ph td:first-child { text-align: left; }
+table.ph th { color: var(--muted); font-weight: 600; }
+.calc .assume { grid-column: 1 / -1; font-size: 12.5px; color: var(--warn); margin: -2px 0 4px; }
+.legend2 { font-size: 13px; color: var(--muted); max-width: 80ch; }
+</style>
+
+
+<div class="app">
+  <div class="stage">
+    <canvas id="c" aria-label="โมเดล 3 มิติ สะพานคู่ตามแบบ ทล. และแนวเสาไฟฟ้า ทล.222 กม.6+085"></canvas>
+    <div class="modes" role="group" aria-label="ขั้นตอน">
+      <button id="m0" data-mode="0">1 สภาพปัจจุบัน</button>
+      <button id="m1" data-mode="1" aria-pressed="true">2 สะพานใหม่ตามแบบ ทล. (จุดขัดแย้ง)</button>
+      <button id="m2" data-mode="2">3 แผนงาน 22 kV (H-Frame เดิม)</button>
+      <button id="m3" data-mode="3">4 ทางเลือก: ย้ายเสา 115 kV ฝั่งใต้</button>
+    </div>
+    <div class="views" role="group" aria-label="มุมมอง">
+      <button id="v3d">มุม 3D</button>
+      <button id="vtop">มุมบน</button>
+      <button id="vroad">มองตามถนน</button>
+      <button id="vside">มองข้ามห้วย</button>
+      <button id="v22">มองแนว 22 kV</button>
+      <button id="vunder">ใต้สะพาน</button>
+      <button id="vdet">ซูมหัวเสา</button>
+      <a href="parts.html">ชุดอุปกรณ์ตามแบบ</a>
+    </div>
+    <div id="boqv" hidden>
+      <h2 id="boqTitle">ปริมาณงาน (BOQ)</h2>
+      <p class="lead">นับจากรูปทรงในโมเดลของขั้นที่เลือก รายการวัสดุย่อยคัดจากบัญชีวัสดุในแบบมาตรฐาน กฟภ. ตามเลขแบบ ราคาให้กรอกเอง เก็บไว้ในเบราว์เซอร์นี้เท่านั้น</p>
+      <div class="boqbar" role="group" aria-label="ทางเลือก">
+        <button data-bm="2">3 แผนงาน 22 kV</button><button data-bm="3">4 ย้ายเสา 115 kV ฝั่งใต้</button>
+        <button id="boqCopy">คัดลอกตาราง (วางใน Excel)</button><button id="boqClose">กลับไปโมเดล 3D</button>
+      </div>
+      <div class="grid-wrap"><table class="boq" id="boqT"></table></div>
+      <p class="legend2" id="boqNote"></p>
+    </div>
+    <div class="stamp">แบบร่างเพื่อประสานงาน สะพานตามแบบ ทล. (ได้รับ 19 พ.ย. 2569) ค่าที่ไม่มีในแบบเป็นค่าสมมติ ยังไม่ใช่แบบก่อสร้าง</div>
+  </div>
+
+  <aside>
+    <div>
+      <h1>รื้อย้ายเสาไฟฟ้า ทล.222 กม.6+085</h1>
+      <p class="sub">ตอนเดื่อศรีคันไชย - หนองแวง สะพาน คสล. 2 แห่ง (LT., RT.) กฟส.พังโคน ประสาน ศูนย์สร้างและบูรณะสะพานที่ 2 (ขอนแก่น)</p>
+    </div>
+
+    <div class="status" id="status" aria-live="polite"></div>
+    <button class="boqopen" id="boqOpen">ปริมาณงานขั้นนี้ (BOQ)</button>
+
+    <section>
+      <h2>ค่าจากแบบ ทล. (ไม่ปรับ)</h2>
+      <dl>
+        <dt>สะพานใหม่</dt><dd>สะพานคู่ PC Box Beam 7 × 20.00 = 140 ม. (กม.6+015 ถึง 6+155) ก่อสร้าง 2 Stage</dd>
+        <dt>ความกว้าง</dt><dd>ต่อสะพาน: ทางเท้า 1.50 + ผิวจราจร 11.00 + ขอบทาง 0.50 ม.</dd>
+        <dt>ขอบพื้นสะพาน</dt><dd>LT. (ตะวันตก) offset +1.5 ถึง +14.5 ม. RT. (ตะวันออก) −1.0 ถึง −14.0 ม.</dd>
+        <dt>ตอม่อ</dt><dd>ริมฝั่ง −70.0 และ +70.3 ตอม่อกลางน้ำ −49.8 −29.8 −9.8 +10.2 +30.2 +50.2 ม.</dd>
+        <dt>แผ่นพื้นทางเข้า</dt><dd>10 ม. ปลายที่ −80.1 และ +80.5 ม.</dd>
+        <dt>ระดับ</dt><dd>หลังสะพาน 100.000 ท้องคาน ≈ 99.20 (วัดจากแบบ) H.W.L. 97.300 ม.</dd>
+        <dt>เสาเข็ม</dt><dd>เสาเข็มเจาะ 0.60 ม. (wet process)</dd>
+        <dt>สะพานเดิม</dt><dd>Plank girder 15 × 10 = 150 ม. ผิวจราจร 8.00 ทางเท้า 1.50 ม. รื้อออก</dd>
+      </dl>
+      <p class="note" style="margin-top:8px">แกน: along วัดจากกึ่งกลางสะพาน (+ ไปทิศเหนือ อ.วานรนิวาส) offset ตั้งฉาก (+ ตะวันตก ฝั่ง 115 kV) ระดับดินใต้สะพานตามรูปตัดตามยาว 31 จุด ทุก 5 ม. (along −73 ถึง +77 วัดตำแหน่งจากภาพแบบ) จำนวนช่อง Box Beam ความลึกคาน/พื้น ขนาดคานรัดหัวเสา ความยาวเข็ม และรูปราว เป็นค่าสมมติเพื่อภาพเท่านั้น</p>
+    </section>
+
+    <section>
+      <h2>ค่าสมมติ (ปรับได้)</h2>
+      <div class="field"><label for="row">R.O.W. ความกว้างเขตทางทั้งหมด (รอแขวงทางหลวง)</label><output id="rowo"></output>
+        <input id="row" type="range" min="20" max="80" step="1" value="40"></div>
+      <div class="field"><label for="low">L.O.W. ห่างขอบทาง/ขอบสะพานใหม่ (รอแขวงทางหลวง)</label><output id="lowo"></output>
+        <input id="low" type="range" min="0" max="10" step="0.5" value="1.5"></div>
+      <div class="calc">
+        <label for="g0">ระดับดินที่โคนเสา (ม. รทก.)</label><input id="g0" type="number" step="0.1" value="99.0">
+        <p class="assume">ค่าสมมติ: แบบมีระดับดินเฉพาะใต้สะพาน ปลายสะพาน 98.91 / 99.02</p>
+        <label for="v115">เกณฑ์ระยะดิ่ง 115 kV เหนือผิวทาง (ม.)</label><input id="v115" type="number" step="0.1" value="8.5">
+        <p class="assume">ค่าสมมติ: ยังไม่พบเกณฑ์ในเอกสาร กฟภ. ที่มี</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>แผนงาน 22 kV ฝั่ง RT. (ค่าสมมติ ปรับได้)</h2>
+      <div class="calc">
+        <label for="hTop">ความสูงจุดยึดวงจรบน ACSR เหนือดิน (ม.)</label><input id="hTop" type="number" step="0.05" value="13.85">
+        <label for="hLow">ความสูงจุดยึดวงจรล่าง (SAC เดิม) (ม.)</label><input id="hLow" type="number" step="0.05" value="12.25">
+        <label for="dzTop">ตำแหน่งทางราบเฟสวงจรบน (ม.)</label><input id="dzTop" type="text" value="-2.9, 0, 2.9">
+        <label for="dzLow">ตำแหน่งทางราบลูกถ้วยวงจรล่าง (ม.)</label><input id="dzLow" type="text" value="-2.9, 0, 2.9">
+        <label for="sag22">ระยะหย่อน ACSR กลางช่วง (ม.)</label><input id="sag22" type="number" step="0.1" value="2.9">
+        <label for="sagSac">ระยะหย่อน SAC กลางช่วง (ม.)</label><input id="sagSac" type="number" step="0.1" value="2.9">
+        <p class="assume">ค่าสมมติทั้งหมด: ความสูงตั้งต้นจากแบบ 2221 (คอนบน 13.85 ม.) วงจรล่าง 1.60 ม. ใต้คอนบน ตำแหน่งทางราบวัดจากกึ่งกลาง H-Frame (+ ออกจากถนน) ระยะหย่อนประมาณจากตัวอย่าง ACSR 185 ในคู่มือข้ามแม่น้ำหรือถนน ต้องวัดจริงในการสำรวจร่วม</p>
+      </div>
+      <p class="note">เกณฑ์: สายเปลือยเหนือพื้นสะพาน/ผิวทาง 6.10 ม. และ 7.50 ม. ระยะทางราบถึงขอบสะพาน 1.80 ม. (ตารางระยะห่างทางไฟฟ้า SA2-015/45017)</p>
+    </section>
+
+    <section id="secMove">
+      <h2>ทางเลือกย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)</h2>
+      <div class="calc">
+        <label for="mvA">ตำแหน่งใหม่ along (ม.)</label><input id="mvA" type="number" step="0.5" value="-90">
+        <label for="mvO">ตำแหน่งใหม่ offset (ม.)</label><input id="mvO" type="number" step="0.5" value="18">
+        <p class="assume">ค่าสมมติ: ตำแหน่งตั้งต้นเพื่อคุยกับ กฟข. (ผู้ออกแบบ 115 kV) ยังไม่ใช่ตำแหน่งที่ออกแบบ</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>ระยะหย่อนสาย 115 kV (สายคู่ 2 × 400 ตร.มม.)</h2>
+      <div class="calc">
+        <label for="cw">น้ำหนักสาย (กก./ม.)</label><input id="cw" type="number" step="0.001" value="1.075">
+        <label for="ca">พื้นที่หน้าตัด (ตร.มม.)</label><input id="ca" type="number" step="1" value="400">
+        <label for="ce">โมดูลัส E (GPa)</label><input id="ce" type="number" step="1" value="55">
+        <label for="cal">สัมประสิทธิ์ขยายตัว (×10⁻⁶/°C)</label><input id="cal" type="number" step="0.1" value="23.0">
+        <label for="ch">แรงดึงที่ 25 °C (kN)</label><input id="ch" type="number" step="0.5" placeholder="คำนวณเอง">
+        <label for="tA">อุณหภูมิออกแบบสูงสุด (°C)</label><input id="tA" type="number" step="5" value="75">
+        <label for="cd">เส้นผ่านศูนย์กลางสาย (มม.)</label><input id="cd" type="number" step="0.1" value="26.0">
+        <label for="cu">แรงดึงประลัย UTS (kN)</label><input id="cu" type="number" step="1" value="62">
+        <label for="tmin">อุณหภูมิต่ำสุด (°C)</label><input id="tmin" type="number" step="1" value="10">
+        <label for="tavg">อุณหภูมิเฉลี่ย (°C)</label><input id="tavg" type="number" step="1" value="30">
+        <label for="qc">แรงลมบนสาย (กก./ตร.ม.)</label><input id="qc" type="number" step="5" value="40">
+      </div>
+      <table class="res" id="res"></table>
+      <p class="note" style="margin-top:10px"><b>ที่มา:</b> น้ำหนักสาย 1.075 กก./ม. และเกณฑ์แรงดึง %UTS จากเทคนิคการก่อสร้างสายส่ง 115 kV และคู่มือข้ามแม่น้ำหรือถนน (ใช้เกณฑ์หลัง 10 ปี 40% / 20%) ถ้าเว้นช่องแรงดึงไว้ ระบบหาแรงดึงสูงสุดที่ผ่านเกณฑ์ให้เอง E, สัมประสิทธิ์ขยายตัว, เส้นผ่านศูนย์กลาง, UTS และอุณหภูมิ เป็นค่าตัวอย่างสายอลูมิเนียม 400 ตร.มม. ทั่วไป (ค่าสมมติ) ระยะหย่อนคิดต่อเส้น สายคู่ในมัดเดียวกันหย่อนเท่ากัน</p>
+    </section>
+
+    <section>
+      <h2>สัญลักษณ์</h2>
+      <div class="legend">
+        <div><span style="background:#8e9590"></span>ถนนและสะพานเดิม (ค่าสมมติ)</div>
+        <div><span style="background:#cfccc2"></span>สะพานคู่ใหม่ตามแบบ ทล.</div>
+        <div><span style="background:#c0262d"></span>จุดขัดแย้ง / รื้อถอน</div>
+        <div><span style="background:#e5934d"></span>ต้องตรวจเพิ่ม</div>
+        <div><span style="background:#1c2f6e"></span>สาย 115 kV (สายคู่)</div>
+        <div><span style="background:#6b4a1d"></span>สาย 22 kV ACSR</div>
+        <div><span style="background:#2b2b2b"></span>สาย 22 kV 120 SAC</div>
+        <div><span style="background:#1f9a55"></span>งานใหม่ / ย้ายแล้ว</div>
+        <div><span style="background:#2f6fd0"></span>R.O.W. (ค่าสมมติ)</div>
+        <div><span style="background:#d07a1a"></span>L.O.W. (ค่าสมมติ)</div>
+        <label><input type="checkbox" id="hwlOn" checked> <span style="background:#5f8fa8"></span>ระดับน้ำสูงสุด H.W.L. 97.300</label>
+        <label><input type="checkbox" id="gisOn"> <span style="background:#d4a017"></span>ตำแหน่งเสาและสายตาม PEA GIS</label>
+      </div>
+      <p class="note" id="gisNote" hidden><b>PEA GIS (ดึง 14 พ.ย. 2569):</b> ระยะวัดตามแนวถนนจาก กม.6+085 โดยไม่เลื่อน ตรงกับแปลน ทล. ภายใน 2–4 ม. ใส่เฉพาะระยะ ความสูง และขนาดสาย ความสูงสายใน GIS ไม่มี จึงวาดที่ระดับคงที่</p>
+    </section>
+
+    <section>
+      <h2>ข้อมูลโครงการ</h2>
+      <dl>
+        <dt>พิกัด</dt><dd style="font-family:var(--f-num)">N 17.442615 E 103.727626</dd>
+        <dt>งบประมาณ</dt><dd>40,000,000 บาท (ปีงบ 2570)</dd>
+        <dt>หนังสือ ทล.</dt><dd>ลว. 19 ต.ค. 2569 (รับเลข 6043)</dd>
+      </dl>
+    </section>
+
+    <p class="note"><b>ที่มา:</b> ตำแหน่งเสา 115 kV และ 22 kV จากแปลนตำแหน่งเสาไฟฟ้าในแบบ ทล. (DWG) 115 kV เป็นวงจรเดี่ยว สายคู่ 2 × 400 ตร.มม. (หัวเสา SD-TG-3 แบบ 5264A ความสูงตามแบบ) ทิศคอนหัวเสา 115 kV (ยื่นเข้าหาถนน) และความสูงจุดยึดสาย 22 kV เป็นค่าสมมติ ตำแหน่งและระดับสะพานเดิมเป็นค่าสมมติ (แบบบอกเพียงชนิดและความยาว) ลากเพื่อหมุน คลิกขวาเพื่อเลื่อนภาพ หมุนล้อเพื่อซูม</p>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="assets/pea_parts.js"></script>
+<script src="assets/doh_bridge.js"></script>
+<script>
+(async function () {
+  try { await document.fonts.load('600 40px "Sarabun"'); } catch (e) {}
+
+  // ================= DOH bridge drawing (docs/doh_bridge_plan_extract.json, received 19 Nov 2026) =================
+  // three.js axes: x = along (m from the bridge centre km 6+085, + north to อ.วานรนิวาส), y = elevation − 100.000, z = −offset (+ east, 22 kV side)
+  const DOH = {
+    deck: 100.0, soffit: 99.2, hwl: 97.3,
+    lt: [-14.5, -1.5], rt: [1.0, 14.0],                  // deck edges in z (offset west +1.5…+14.5, east −1.0…−14.0)
+    abut: [-70.0, 70.3], piers: [-49.8, -29.8, -9.8, 10.2, 30.2, 50.2], slab: [-80.1, 80.5],
+    gnd: { x0: -73, dx: 5, v: [98.91, 97.0, 96.5, 95.3, 95.0, 95.0, 95.0, 95.0, 95.0, 95.0, 95.0, 95.0, 94.5, 93.8, 93.3, 93.5, 93.9, 94.0, 94.0, 94.1, 94.5, 94.6, 94.7, 94.7, 94.7, 94.7, 94.7, 95.0, 96.5, 97.5, 99.02] },
+    p115: [[-113.2, 12.8], [-76.9, 12.6], [86.5, 12.5], [127.2, 12.2]],          // [along, offset]
+    hfS: [[-109.4, -15.3], [-109.5, -18.3]], hfN: [[116.1, -11.5], [115.9, -14.4]], p22: [106.0, -10.2],
+    old: { len: 150, span: 10, roadway: 8.0, walk: 1.5 },
+  };
+  const Z = o => -o;                                   // offset -> z
+  const avg = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const HF = [avg(...DOH.hfS), avg(...DOH.hfN)].map(([x, o]) => [x, Z(o)]);   // H-Frame centres [x, z]
+  const P115 = DOH.p115.map(([x, o]) => [x, Z(o)]);
+  const lerp = (x, x0, y0, x1, y1) => y0 + (y1 - y0) * Math.min(1, Math.max(0, (x - x0) / (x1 - x0)));
+  // finished road edges (|z|) from the DOH plan: deck / approach slab, then "road_edge_beyond_approach"
+  const edgeW = x => x >= DOH.slab[0] && x <= DOH.slab[1] ? 14.5 : x < 0 ? lerp(x, -80.1, 13.0, -225.6, 5.0) : lerp(x, 80.4, 12.7, 97.6, 5.0);
+  const edgeE = x => x >= DOH.slab[0] && x <= DOH.slab[1] ? 14.0 : x < 0 ? lerp(x, -80.2, 12.5, -223.6, 17.8) : lerp(x, 80.4, 12.7, 97.6, 5.0);
+  const gndAt = x => { const g = DOH.gnd, i = (x - g.x0) / g.dx;
+    if (i <= 0) return lerp(x, g.x0 - 10, P.g0, g.x0, g.v[0]); if (i >= g.v.length - 1) return lerp(x, g.x0 + g.dx * (g.v.length - 1), g.v[g.v.length - 1], g.x0 + g.dx * (g.v.length - 1) + 10, P.g0);
+    const k = Math.floor(i); return g.v[k] + (g.v[k + 1] - g.v[k]) * (i - k); };
+  const EXT = 230;
+
+  const P = { mode: 1, ROW: 40, low: 1.5, g0: 99.0 };
+  const num = id => parseFloat(document.getElementById(id).value);
+  const list = id => document.getElementById(id).value.split(/[,;\s]+/).map(parseFloat).filter(v => !isNaN(v));
+
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xc9d6dd);
+  scene.fog = new THREE.Fog(0xc9d6dd, 450, 900);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 1200);
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.53;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x6f7d5a, 0.75));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.75);
+  sun.position.set(-60, 90, 50); sun.castShadow = true;
+  Object.assign(sun.shadow.camera, { left: -200, right: 200, top: 200, bottom: -200, far: 450 });
+  sun.shadow.mapSize.set(2048, 2048); scene.add(sun);
+
+  const M = (c, o = {}) => new THREE.MeshLambertMaterial(Object.assign({ color: c }, o));
+  const mat = {
+    ground: M(0x8fa66b), bank: M(0x8a7a5c), water: M(0x5f8fa8, { transparent: true, opacity: .85 }), hwl: M(0x4f87b0, { transparent: true, opacity: .33, depthWrite: false, side: THREE.DoubleSide }),
+    road: M(0x8e9590), roadDS: M(0x8e9590, { side: THREE.DoubleSide }), fill: M(0x9c8f72), mark: M(0xf2f2ee), oldDeck: M(0xb7bbb6), rail: M(0xdfe2de), pier: M(0xa9aca8),
+    pole: M(0x9a9d98), poleBad: M(0xc0262d), poleWarn: M(0xe5934d), poleGhost: M(0xc0262d, { transparent: true, opacity: .18 }),
+    poleNew: M(0x1f9a55), arm: M(0x55595a), steel: M(0x6c7377),
+  };
+  const B = c => new THREE.MeshBasicMaterial({ color: c });
+  const lineMat = {
+    acsr: B(0x6b4a1d), sac: B(0x2b2b2b), hv: B(0x1c2f6e), neu: B(0x1f9a55), neuHv: B(0x0f6b38),
+    ghost: new THREE.MeshBasicMaterial({ color: 0xc0262d, transparent: true, opacity: .25 }), bad: B(0xc0262d),
+    row: new THREE.LineDashedMaterial({ color: 0x2f6fd0, dashSize: 2, gapSize: 1.2 }),
+    low: new THREE.LineDashedMaterial({ color: 0xd07a1a, dashSize: 1, gapSize: 0.8 }),
+    dim: new THREE.LineBasicMaterial({ color: 0x111111 }), dimBad: new THREE.LineBasicMaterial({ color: 0xc0262d }),
+  };
+
+  // ---------- GLB assets: pole heads (assets/build_parts.py) and the DOH bridge (assets/build_bridge.py), both Blender 5.1 ----------
+  const Ph = (c, sh) => new THREE.MeshPhongMaterial({ color: c, shininess: sh, specular: 0x4a4a4a });
+  const PART_MAT = { concrete: M(0xb4b2ab), galv: Ph(0x9aa3a8, 45), porcelain: Ph(0x6e3b20, 80), polymer: Ph(0x7d858a, 20),
+    red: Ph(0xc0392b, 30), cable: M(0x1b1b1b), alu: Ph(0xc9cdd0, 60), lamp: new THREE.MeshBasicMaterial({ color: 0xfff4cc }),
+    beam: M(0xd2cfc6), slab: M(0x8b8f8c), walk: M(0xbdbab2), barrier: M(0xe6e5df), rail: Ph(0x9aa3a8, 40), sub: M(0xb0aea6), pile: M(0x85827a), approach: M(0x9a9e9a) };
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0x262b2e, transparent: true, opacity: 0.45 });
+  async function loadGLB(b64, edgeAngle) {
+    if (!b64 || !THREE.GLTFLoader) return null;
+    try {
+      const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+      const gl = await new Promise((ok, no) => new THREE.GLTFLoader().parse(bin, '', ok, no));
+      const out = {};
+      for (const root of gl.scene.children) {
+        const pts = {}, labels = [];
+        for (const o of [...root.children]) {
+          if (o.isMesh) {
+            o.material = PART_MAT[o.name.slice(root.name.length + 1)] || PART_MAT.galv; o.castShadow = o.receiveShadow = true;
+            o.add(new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, edgeAngle), edgeMat));
+          } else if (o.userData.pt) { (pts[o.userData.pt] = pts[o.userData.pt] || []).push(o.position.clone()); root.remove(o); }
+          else if (o.userData.t) { labels.push({ text: o.userData.t, p: o.position.clone() }); root.remove(o); }
+        }
+        out[root.name] = { obj: root, pts, labels, title: root.userData.title };
+      }
+      return out;
+    } catch (e) { console.warn('glb', e); return null; }
+  }
+  const PARTS = await loadGLB(window.PEA_PARTS_B64, 35);
+  const BRIDGE = await loadGLB(window.DOH_BRIDGE_B64, 30);
+
+  // ---------- helpers ----------
+  function box(w, h, d, m, x, y, z, parent) {
+    const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; (parent || scene).add(o); return o;
+  }
+  const boxXY = (x0, x1, y0, y1, z0, z1, m, parent) => box(x1 - x0, y1 - y0, z1 - z0, m, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, parent);
+  function cyl(r1, r2, h, m, x, y, z, parent) {
+    const o = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, 12), m);
+    o.position.set(x, y + h / 2, z); o.castShadow = true; (parent || scene).add(o); return o;
+  }
+  function label(text, opts = {}) {
+    const fs = 64, pad = 22, cv = document.createElement('canvas'), g = cv.getContext('2d');
+    g.font = `600 ${fs}px Sarabun, sans-serif`;
+    const tw = Math.ceil(g.measureText(text).width);
+    cv.width = tw + pad * 2; cv.height = fs + pad * 1.4;
+    g.font = `600 ${fs}px Sarabun, sans-serif`;
+    g.fillStyle = opts.bg || 'rgba(255,255,255,.9)';
+    const r = 16; g.beginPath(); g.moveTo(r, 0); g.arcTo(cv.width, 0, cv.width, cv.height, r); g.arcTo(cv.width, cv.height, 0, cv.height, r);
+    g.arcTo(0, cv.height, 0, 0, r); g.arcTo(0, 0, cv.width, 0, r); g.fill();
+    if (opts.border) { g.strokeStyle = opts.border; g.lineWidth = 6; g.stroke(); }
+    g.fillStyle = opts.color || '#1d2622'; g.textBaseline = 'middle'; g.fillText(text, pad, cv.height / 2 + 4);
+    const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    const h = opts.size || 2.4; s.scale.set(h * cv.width / cv.height, h, 1); s.renderOrder = 10;
+    return s;
+  }
+  const put = (grp, text, x, y, z, opts) => { const l = label(text, opts); l.position.set(x, y, z); grp.add(l); return l; };
+  const BAD = { color: '#fff', bg: 'rgba(192,38,45,.92)' }, WARN = { color: '#3d1f00', bg: 'rgba(245,190,120,.95)', border: '#b4560f' },
+    NEW = { color: '#0f5a31', border: '#1f9a55' };
+  const spanPt = (a, b, sag, t) => new THREE.Vector3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t - 4 * sag * t * (1 - t), a.z + (b.z - a.z) * t);
+  function wire(a, b, sag, m, r = 0.05) {
+    const pts = []; for (let i = 0; i <= 32; i++) pts.push(spanPt(a, b, sag, i / 32));
+    return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, r, 5), m);
+  }
+  const line = (pts, m, grp) => { const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), m); if (m.isLineDashedMaterial) l.computeLineDistances(); grp.add(l); return l; };
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const fmt = v => isNaN(v) ? '-' : (Math.round(v * 10) / 10).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const f2 = v => isNaN(v) ? '-' : v.toFixed(2);
+  const ok = (good, t1 = 'ผ่าน', t0 = 'ไม่ผ่าน') => good ? `<span class="st-ok">${t1}</span>` : `<span class="st-bad">${t0}</span>`;
+  const gy = () => P.g0 - DOH.deck;                    // pole base level in model y
+
+  // ---------- terrain: ground profile under the bridge (DOH longitudinal section), flat beyond at the assumed level ----------
+  const terrain = new THREE.Group(); scene.add(terrain);
+  function buildTerrain() {
+    terrain.clear();
+    const nx = 230, nz = 2, g = new THREE.PlaneGeometry(2 * EXT, 260, nx, nz); g.rotateX(-Math.PI / 2);
+    const p = g.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, gndAt(p.getX(i)) - DOH.deck);
+    g.computeVertexNormals(); const m = new THREE.Mesh(g, mat.ground); m.receiveShadow = true; terrain.add(m);
+    // stream channel (PEA GIS water layer −10…+4 m) drawn on the ground
+    const s = new THREE.PlaneGeometry(14, 260, 14, 1); s.rotateX(-Math.PI / 2); s.translate(-3, 0, 0);
+    const q = s.attributes.position; for (let i = 0; i < q.count; i++) q.setY(i, gndAt(q.getX(i)) - DOH.deck + 0.06);
+    terrain.add(new THREE.Mesh(s, mat.water));
+    put(terrain, 'ลำห้วย (GIS)', -3, gndAt(-3) - DOH.deck + 1.2, 70, { size: 2.2, color: '#1b4d66' });
+  }
+  const hwlG = new THREE.Group(); scene.add(hwlG);
+  { const h = new THREE.Mesh(new THREE.PlaneGeometry(146, 150), mat.hwl); h.rotateX(-Math.PI / 2); h.position.set(1.5, DOH.hwl - DOH.deck, 0); hwlG.add(h);
+    put(hwlG, 'H.W.L. 97.300', -40, DOH.hwl - DOH.deck + 0.6, 30, { size: 1.6, color: '#1b4d66' }); }
+
+  // ---------- existing road + old plank girder bridge (type and length from DOH; position and level ค่าสมมติ) ----------
+  const OLD_TOP = 99.0 - DOH.deck;                     // ค่าสมมติ ≈ ground at the bridge ends on the DOH section (98.91 / 99.02)
+  const oldG = new THREE.Group(); scene.add(oldG);
+  function buildOld() {
+    oldG.clear(); const o = DOH.old, half = o.len / 2, hw = o.roadway / 2 + o.walk;
+    for (const s of [-1, 1]) boxXY(s > 0 ? half : -EXT, s > 0 ? EXT : -half, Math.min(OLD_TOP, gy()) - 0.4, OLD_TOP, -o.roadway / 2 - 1, o.roadway / 2 + 1, mat.road, oldG);
+    boxXY(-half, half, OLD_TOP - 0.5, OLD_TOP, -hw, hw, mat.oldDeck, oldG);
+    for (const z of [-hw + 0.15, hw - 0.15]) boxXY(-half, half, OLD_TOP, OLD_TOP + 0.9, z - 0.15, z + 0.15, mat.rail, oldG);
+    for (let x = -half; x <= half + 0.01; x += o.span) {
+      const y0 = gndAt(x) - DOH.deck; for (const z of [-hw + 1.5, 0, hw - 1.5]) boxXY(x - 0.2, x + 0.2, y0, OLD_TOP - 0.5, z - 0.2, z + 0.2, mat.pier, oldG);
+    }
+    for (let x = -EXT + 10; x < EXT - 10; x += 6) boxXY(x - 1.5, x + 1.5, OLD_TOP, OLD_TOP + 0.02, -0.08, 0.08, mat.mark, oldG);
+    put(oldG, 'สะพานเดิม Plank girder 15 × 10 = 150 ม. (ตำแหน่ง/ระดับค่าสมมติ)', 0, OLD_TOP + 3.2, 0, { size: 1.8 });
+  }
+
+  // ---------- new twin bridges (Blender GLB, fallback: boxes from the same DOH values) + new road ----------
+  const newG = new THREE.Group(); scene.add(newG);
+  function fallbackBridge(grp) {
+    const m = M(0xcfccc2), s = mat.pier;
+    for (const [z0, z1] of [DOH.lt, DOH.rt]) {
+      boxXY(DOH.abut[0], DOH.abut[1], DOH.soffit - DOH.deck, 0, z0, z1, m, grp);
+      boxXY(DOH.slab[0], DOH.abut[0], -0.3, 0, z0, z1, m, grp); boxXY(DOH.abut[1], DOH.slab[1], -0.3, 0, z0, z1, m, grp);
+      for (const x of DOH.piers) { boxXY(x - 0.6, x + 0.6, -1.85, -0.8, z0, z1, s, grp);
+        for (const c of [2.0, 6.25, 10.5]) boxXY(x - 0.5, x + 0.5, 92.8 - DOH.deck, -1.85, (z0 + z1) / 2 - 6.25 + c - 0.5, (z0 + z1) / 2 - 6.25 + c + 0.5, s, grp); }
+      for (const x of DOH.abut) boxXY(x - 0.5, x + 0.5, 94.8 - DOH.deck, -0.8, z0, z1, s, grp);
+    }
+  }
+  function roadStrip(x0, x1, grp) {   // road surface 100.000 between the finished edges, with an embankment skirt down to the ground
+    const n = Math.max(2, Math.ceil(Math.abs(x1 - x0) / 2)), top = [], v = [], idx = [];
+    for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n; top.push([x, -edgeW(x) - 0.0, edgeE(x)]); }
+    const yb = x => Math.min(gndAt(x) - DOH.deck, -0.3) - 0.05;
+    top.forEach(([x, zw, ze]) => v.push(x, 0, zw, x, 0, ze, x, yb(x), zw - 2 * (0 - yb(x)), x, yb(x), ze + 2 * (0 - yb(x))));
+    for (let i = 0; i < n; i++) { const a = i * 4, b = a + 4;
+      idx.push(a, b, a + 1, a + 1, b, b + 1, a + 2, b + 2, a, a, b + 2, b, a + 1, b + 1, a + 3, a + 3, b + 1, b + 3); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.setIndex(idx); g.computeVertexNormals();
+    const mRoad = new THREE.Mesh(g, mat.roadDS); mRoad.receiveShadow = true; grp.add(mRoad);
+    for (let x = Math.min(x0, x1) + 4; x < Math.max(x0, x1) - 3; x += 6) boxXY(x - 1.5, x + 1.5, 0.005, 0.02, -0.08, 0.08, mat.mark, grp);
+  }
+  function buildNew() {
+    newG.clear();
+    if (BRIDGE && BRIDGE.DOH_BRIDGE) newG.add(BRIDGE.DOH_BRIDGE.obj); else fallbackBridge(newG);
+    roadStrip(-EXT, DOH.slab[0], newG); roadStrip(DOH.slab[1], EXT, newG);
+    for (const [a, b] of [[DOH.slab[0], DOH.abut[0] - 1], [DOH.abut[1] + 1, DOH.slab[1]]])   // embankment fill under the approach slabs
+      for (const [z0, z1] of [DOH.lt, DOH.rt]) boxXY(a, b, Math.min(gndAt(a), gndAt(b)) - DOH.deck - 0.3, -0.31, z0, z1, mat.fill, newG);
+    put(newG, 'สะพานใหม่ LT. (PC Box Beam 7 × 20 ม.)', 0, 4, -8, { size: 1.9, color: '#5a4a1d', border: '#cfccc2' });
+    put(newG, 'สะพานใหม่ RT.', 0, 4, 7.5, { size: 1.9, color: '#5a4a1d', border: '#cfccc2' });
+    put(newG, 'แผ่นพื้นทางเข้า 10 ม.', DOH.slab[0] + 5, 2.2, -8, { size: 1.3 });
+  }
+
+  // ---------- R.O.W. / L.O.W. (both waiting for the highway district: ค่าสมมติ) ----------
+  const rowG = new THREE.Group(); scene.add(rowG);
+  function buildROW() {
+    rowG.clear();
+    for (const s of [-1, 1]) {
+      const z = s * P.ROW / 2, y = gy() + 0.3;
+      line([V(-EXT + 5, y, z), V(EXT - 5, y, z)], lineMat.row, rowG);
+      put(rowG, `R.O.W. ${fmt(P.ROW)} ม. (ค่าสมมติ รอแขวงทางหลวง)`, -150, y + 2, z, { size: 1.5, color: '#1d4f9a' });
+      if (P.mode >= 1) {
+        const pts = []; for (let x = -EXT + 5; x <= EXT - 5; x += 2) pts.push(V(x, 0.25, s * ((s > 0 ? edgeE(x) : edgeW(x)) + P.low)));
+        line(pts, lineMat.low, rowG);
+        put(rowG, `L.O.W. ขอบทาง + ${fmt(P.low)} ม. (ค่าสมมติ)`, -125, 2.0, s * (s > 0 ? edgeE(-125) : edgeW(-125)) + s * P.low, { size: 1.3, color: '#9a4a00' });
+      }
+    }
+  }
+
+  // ---------- poles ----------
+  const POLE_TOP = 20.0, STRING = 7 * 0.146 + 0.33, PIN22 = 0.29;    // 5264A: 22 m pole, top 20.0 m; string hardware / pin height ค่าสมมติ
+  const HV_YS = [0.2, 2.7, 5.2].map(d => POLE_TOP - d - STRING), Y22 = POLE_TOP - 5.2 - 4.95 + PIN22;
+  function part(name, m, g, y, ry = 0) {
+    const o = PARTS[name].obj.clone(); o.position.y = y; o.rotation.y = ry;
+    if (m !== mat.pole && m !== mat.poleNew) o.traverse(c => { if (c.isMesh) c.material = m; if (c.isLineSegments) c.visible = false; });
+    g.add(o); return o;
+  }
+  const grp = (x, z, parent) => { const g = new THREE.Group(); g.position.set(x, gy(), z); parent.add(g); return g; };
+  function tall(x, z, m, parent, h = POLE_TOP) { const g = grp(x, z, parent);
+    cyl(0.2, 0.35, h, m, 0, 0, 0, g);
+    if (PARTS) part('SDTG3', m, g, h); else { for (const y of HV_YS) box(0.18, 0.18, 2.4, mat.steel, 0, y + STRING + h - POLE_TOP, 1.2, g); box(0.14, 0.14, 2.6, mat.steel, 0, Y22 - PIN22 + h - POLE_TOP, 1.4, g); }
+    return g; }
+  // 115 kV conductor points of an SD-TG-3 pole (world): hv = 3 phases x 2 sub-conductors, mv = 22 kV underbuilt
+  function hvPts(x, z, h = POLE_TOP) {
+    const b = V(x, gy() + h - POLE_TOP, z);
+    if (PARTS) { const S = PARTS.SDTG3.pts, w = p => V(p.x, POLE_TOP + p.y, p.z).add(b); return { hv: ['hv0', 'hv1', 'hv2'].flatMap(k => S[k].map(w)), mv: S.mv.map(w) }; }
+    return { hv: HV_YS.flatMap(y => [-0.2, 0.2].map(d => V(0, y, 2.2 + d).add(b))), mv: [0.7, 1.5, 2.3].map(d => V(0, Y22, d).add(b)) };
+  }
+  function hframe(x, z, m, parent, hTop, low) {   // existing H-Frame, head drawn so that its top crossarm carries the top circuit
+    const g = grp(x, z, parent), h = hTop + 0.15;
+    for (const dz of [-1.5, 1.5]) cyl(0.16, 0.24, h, m, 0, 0, dz, g);
+    if (PARTS) part('HF2221', m, g, h); else box(0.18, 0.18, 6.4, mat.arm, 0, hTop, 0, g);
+    if (low && (Math.abs(low.h - (hTop - 1.6)) > 0.05 || low.dz.some(d => Math.abs(d) > 3.0))) {   // lower crossarm at the assumed position
+      const z0 = Math.min(-3, ...low.dz) - 0.2, z1 = Math.max(3, ...low.dz) + 0.2; boxXY(-0.1, 0.1, low.h - 0.08, low.h + 0.08, z0, z1, mat.steel, g);
+    }
+    return g;
+  }
+  function single(x, z, m, h, parent, kind = 'P2207') { const g = grp(x, z, parent);
+    cyl(0.12, 0.2, h, m, 0, 0, 0, g); if (PARTS) part(kind, m, g, h); else box(0.14, 0.14, 2.4, mat.arm, 0, h - 0.6, 0, g); return g; }
+  function ring(x, z, r, color, parent) {
+    const m = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.5, 40), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: .85 }));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, Math.max(gy(), 0) + 0.08, z); parent.add(m);
+  }
+  function vdim(p, txt, opts, parent, y0 = 0) {   // vertical dimension from the deck/road surface to a conductor point
+    line([V(p.x, y0, p.z), p.clone()], opts === BAD ? lineMat.dimBad : lineMat.dim, parent);
+    for (const y of [y0, p.y]) line([V(p.x - 0.8, y, p.z), V(p.x + 0.8, y, p.z)], opts === BAD ? lineMat.dimBad : lineMat.dim, parent);
+    put(parent, txt, p.x, (y0 + p.y) / 2, p.z + 0.6, Object.assign({ size: 1.3 }, opts));
+  }
+  function hdim(x, z1, z2, y, txt, opts, parent) {
+    line([V(x, y, z1), V(x, y, z2)], lineMat.dim, parent);
+    for (const z of [z1, z2]) line([V(x, y - 0.6, z), V(x, y + 0.6, z)], lineMat.dim, parent);
+    put(parent, txt, x, y + 1.6, (z1 + z2) / 2, Object.assign({ size: 1.3 }, opts));
+  }
+
+  // ---------- sag-tension (parabolic, state change from 25 °C) for the 115 kV conductor ----------
+  function wLoad(wind) { const w = num('cw') * 9.81, q = num('qc') * 9.81 * num('cd') / 1000; return wind ? Math.hypot(w, q) : w; }
+  function tensionAt(L, T, wind, H1) {
+    const w1 = wLoad(false), w2 = wLoad(wind), EA = num('ce') * 1e9 * num('ca') * 1e-6, a = num('cal') * 1e-6;
+    if (!(w1 > 0 && EA > 0 && H1 > 0 && L > 0)) return NaN;
+    const C = H1 - w1 * w1 * L * L * EA / (24 * H1 * H1) - a * EA * (T - 25), K2 = w2 * w2 * L * L * EA / 24;
+    let lo = 1, hi = H1 * 3 + 2e5;
+    for (let i = 0; i < 100; i++) { const m = (lo + hi) / 2; (m - K2 / (m * m) - C > 0) ? hi = m : lo = m; }
+    return lo;
+  }
+  function designH(L) {   // largest H at 25 °C with T(min, wind) ≤ 40 % UTS and T(avg) ≤ 20 % UTS (after-10-years limits, creep not modelled)
+    const U = num('cu') * 1e3; if (!(U > 0)) return NaN;
+    let lo = 100, hi = U;
+    for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2;
+      (tensionAt(L, num('tmin'), true, m) <= 0.40 * U && tensionAt(L, num('tavg'), false, m) <= 0.20 * U) ? lo = m : hi = m; }
+    return lo;
+  }
+  const H25 = L => { const v = num('ch'); return v > 0 ? v * 1e3 : designH(L); };
+  function sagAt(L, T) { const H = tensionAt(L, T, false, H25(L)); return wLoad(false) * L * L / (8 * H); }
+
+  // ---------- clearance of a conductor span against the new bridges / road ----------
+  const onBridge = x => x >= DOH.abut[0] && x <= DOH.abut[1];
+  const onSlab = x => x >= DOH.slab[0] && x <= DOH.slab[1];
+  const inDeck = z => (z >= DOH.lt[0] && z <= DOH.lt[1]) || (z >= DOH.rt[0] && z <= DOH.rt[1]);
+  const deckGap = z => inDeck(z) ? 0 : Math.min(...[...DOH.lt, ...DOH.rt].map(e => Math.abs(z - e)));
+  function clearance(a, b, sag) {
+    const r = { vDeck: Infinity, pDeck: null, vRoad: Infinity, pRoad: null, h: Infinity, pH: null, over: false };
+    for (let i = 0; i <= 400; i++) {
+      const p = spanPt(a, b, sag, i / 400);
+      const road = p.z >= -edgeW(p.x) && p.z <= edgeE(p.x);
+      if (road && p.y < r.vRoad) { r.vRoad = p.y; r.pRoad = p; }
+      if (onSlab(p.x) && inDeck(p.z)) { r.over = true; if (p.y < r.vDeck) { r.vDeck = p.y; r.pDeck = p; } }
+      if (onBridge(p.x)) { const d = deckGap(p.z); if (d < r.h) { r.h = d; r.pH = p; } }
+    }
+    return r;
+  }
+
+  // ---------- 22 kV: existing H-Frame span on RT, top circuit ACSR, lower circuit 120 SAC ----------
+  const L22 = Math.hypot(HF[1][0] - HF[0][0], HF[1][1] - HF[0][1]);
+  const L115 = Math.hypot(P115[2][0] - P115[1][0], P115[2][1] - P115[1][1]);
+  function plan22() {
+    const top = list('dzTop'), low = list('dzLow'), hT = num('hTop'), hL = num('hLow'), s = num('sag22'), sS = num('sagSac');
+    const end = (i, dz, h) => V(HF[i][0], gy() + h, HF[i][1] + dz);
+    const ph = (dz, h, sag, kind, i) => { const a = end(0, dz, h), b = end(1, dz, h); return { kind, i, dz, h, a, b, sag, c: clearance(a, b, sag) }; };
+    const acsr = top.map((dz, i) => ph(dz, hT, s, 'ACSR', i)), sac = low.map((dz, i) => ph(dz, hL, sS, 'SAC', i));
+    const enc = p => p.c.over || p.c.h < 1.8;                         // conductor over the bridge or closer than 1.80 m to its edge
+    const moved = acsr.map((p, i) => enc(p) && low[i] !== undefined ? Object.assign(ph(low[i], hL, s, 'ACSR', i), { from: p, moved: true }) : Object.assign({}, p, { moved: false }));
+    return { acsr, sac, moved, enc, hT, hL, low };
+  }
+  const vOk = v => ({ a: v >= 6.10, b: v >= 7.50 });
+
+  // ---------- build the poles and lines for the current mode ----------
+  const polesG = new THREE.Group(); scene.add(polesG);
+  let S = {};                                            // results for the status panel
+  function buildPoles() {
+    polesG.clear(); S = {};
+    const mode = P.mode, sagT = L => sagAt(L, num('tA')) || 0.5;
+    const pl = plan22(); S.pl = pl;
+    // ---- 115 kV line on LT ----
+    let line115 = P115.slice(), sMoved = null;
+    if (mode === 3) { sMoved = [num('mvA'), Z(num('mvO'))]; line115 = [P115[0], sMoved, P115[2], P115[3]]; }
+    const names = ['115 kV ฝั่งใต้ ต้นถัดไป', '115 kV ฝั่งใต้ (หัวสะพาน)', '115 kV ฝั่งเหนือ (หัวสะพาน)', '115 kV ฝั่งเหนือ ต้นถัดไป'];
+    P115.forEach(([x, z], i) => {
+      let m = mat.pole;
+      if (mode >= 1 && i === 1) m = mode === 3 ? mat.poleGhost : mat.poleBad;
+      if (mode >= 1 && i === 2) m = mat.poleWarn;
+      tall(x, z, m, polesG);
+      if (mode >= 1 && i === 1) { ring(x, z, 1.4, 0xc0262d, polesG); put(polesG, mode === 3 ? 'รื้อถอน' : 'อยู่ในแผ่นพื้นทางเข้า ต้องย้าย', x, gy() + 22, z, BAD); }
+      if (mode >= 1 && i === 2) { ring(x, z, 1.4, 0xe5934d, polesG); const e = edgeW(x);
+        hdim(x, -e, z, 1.0, `ห่างขอบถนน ${fmt(-z - e)} ม.`, WARN, polesG); put(polesG, 'ใกล้ขอบถนน / ลาดคันทาง', x, gy() + 22, z, WARN); }
+    });
+    if (sMoved) { tall(sMoved[0], sMoved[1], mat.poleNew, polesG); put(polesG, `เสา 115 kV ตำแหน่งใหม่ (ค่าสมมติ)`, sMoved[0], gy() + 22, sMoved[1], NEW); }
+    const hvM = (i) => mode === 3 && i <= 1 ? lineMat.neuHv : lineMat.hv;
+    const pts = line115.map(([x, z]) => hvPts(x, z));
+    // beyond the model edge
+    const far = (x, z) => hvPts(x, z);
+    const ends = [[far(-EXT, P115[0][1]), pts[0]], [pts[pts.length - 1], far(EXT, P115[3][1])]];
+    for (const [A, Bp] of ends) { A.hv.forEach((p, k) => polesG.add(wire(p, Bp.hv[k], 0.6, lineMat.hv, 0.04))); A.mv.forEach((p, k) => polesG.add(wire(p, Bp.mv[k], 0.5, lineMat.acsr, 0.035))); }
+    S.span115 = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const L = Math.hypot(line115[i + 1][0] - line115[i][0], line115[i + 1][1] - line115[i][1]), s = sagT(L);
+      const mH = hvM(i), m22 = mode === 3 && i <= 1 ? lineMat.neu : lineMat.acsr;
+      let worst = null, worst22 = null;
+      pts[i].hv.forEach((p, k) => { const q = pts[i + 1].hv[k]; polesG.add(wire(p, q, s, mH, 0.04)); const c = clearance(p, q, s); if (!worst || c.vRoad < worst.vRoad) worst = c; });
+      pts[i].mv.forEach((p, k) => { const q = pts[i + 1].mv[k]; polesG.add(wire(p, q, s * 0.9, m22, 0.035)); const c = clearance(p, q, s * 0.9); if (!worst22 || c.vRoad < worst22.vRoad) worst22 = c; });
+      S.span115.push({ L, s, c: worst, c22: worst22, a: line115[i], b: line115[i + 1] });
+    }
+    const cross = S.span115[1];
+    if (mode >= 1 && cross.c.pDeck) {
+      const v = cross.c.vDeck, good = v >= num('v115');
+      vdim(cross.c.pDeck, `115 kV เหนือ deck LT. ${fmt(v)} ม.`, good ? NEW : BAD, polesG);
+      put(polesG, `115 kV ช่วงข้าม ${fmt(cross.L)} ม. พาดเหนือ deck LT. (หย่อน ${fmt(cross.s)} ม.)`, 0, cross.c.pDeck.y + 5, (line115[1][1] + line115[2][1]) / 2, mode === 3 ? NEW : WARN);
+      if (cross.c22.pDeck) vdim(cross.c22.pDeck.clone().setX(cross.c22.pDeck.x + 6), `22 kV ใต้ 115 kV เหนือ deck ${fmt(cross.c22.vDeck)} ม.`, vOk(cross.c22.vDeck).b ? NEW : BAD, polesG);
+    }
+    if (mode === 0) put(polesG, '115 kV วงจรเดี่ยว สายคู่ 2×400 + 22 kV ใต้', P115[0][0], gy() + 23, P115[0][1], { size: 1.5, color: '#1c2f6e' });
+
+    // ---- 22 kV H-Frames on RT + the single pole from the plan ----
+    const low = { h: pl.hL, dz: pl.low };
+    HF.forEach(([x, z], i) => { hframe(x, z, mat.pole, polesG, pl.hT, low);
+      put(polesG, mode === 2 ? 'ใช้ H-Frame เดิม' : 'H-Frame 22 kV 2 วงจร', x, gy() + pl.hT + 2.2, z, mode === 2 ? NEW : { size: 1.5, color: '#6b4a1d' }); });
+    single(DOH.p22[0], Z(DOH.p22[1]), mat.pole, 10, polesG);
+    put(polesG, 'เสา 22 kV (แปลน ทล.)', DOH.p22[0], gy() + 12.2, Z(DOH.p22[1]), { size: 1.2 });
+    // lines beyond the H-Frames
+    const out = (i, dz, h, m, sg) => { const x = HF[i][0], xe = i ? EXT : -EXT, z = HF[i][1] + dz; polesG.add(wire(V(x, gy() + h, z), V(xe, gy() + h, z), sg, m, 0.035)); };
+    pl.acsr.forEach(p => { out(0, p.dz, pl.hT, lineMat.acsr, 0.6); out(1, p.dz, pl.hT, lineMat.acsr, 0.6); });
+    pl.sac.forEach(p => { out(0, p.dz, pl.hL, lineMat.sac, 0.6); out(1, p.dz, pl.hL, lineMat.sac, 0.6); });
+    if (mode < 2) {
+      pl.acsr.forEach(p => polesG.add(wire(p.a, p.b, p.sag, mode === 1 && pl.enc(p) ? lineMat.bad : lineMat.acsr, 0.035)));
+      pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.sac, 0.06)));
+      if (mode === 1) {
+        const w = pl.acsr.filter(p => p.c.pDeck).sort((p, q) => p.c.vDeck - q.c.vDeck)[0];
+        if (w) vdim(w.c.pDeck, `ACSR เหนือ deck RT. ${fmt(w.c.vDeck)} ม.`, vOk(w.c.vDeck).b ? NEW : BAD, polesG);
+        const n = pl.acsr.filter(pl.enc).length;
+        put(polesG, `22 kV ช่วง ${fmt(L22)} ม.: ACSR ล้ำแนวสะพาน ${n} เฟส`, 20, gy() + pl.hT + 1.5, HF[1][1] - 3, n ? BAD : NEW);
+      }
+    } else {
+      pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.ghost, 0.06)));
+      put(polesG, 'รื้อวงจร 120 SAC ช่วงข้าม', -40, gy() + pl.hL - 3.5, HF[0][1] + 2, BAD);
+      pl.moved.forEach(p => polesG.add(wire(p.a, p.b, p.sag, p.moved ? lineMat.neu : lineMat.acsr, 0.04)));
+      const mv = pl.moved.filter(p => p.moved);
+      put(polesG, mv.length ? `ย้าย ACSR ${mv.length} เฟส ลงลูกถ้วยวงจรล่าง (ตำแหน่ง SAC เดิม)` : 'ไม่มีเฟส ACSR ล้ำแนวสะพาน', 20, gy() + pl.hT + 1.5, HF[1][1] - 3, NEW);
+      const w = pl.moved.filter(p => p.c.pDeck).sort((p, q) => p.c.vDeck - q.c.vDeck)[0];
+      if (w) vdim(w.c.pDeck, `ACSR เหนือ deck RT. ${fmt(w.c.vDeck)} ม.`, vOk(w.c.vDeck).b ? NEW : BAD, polesG);
+      const hmin = pl.moved.filter(p => !p.c.over).sort((p, q) => p.c.h - q.c.h)[0];
+      if (hmin && hmin.c.pH) hdim(hmin.c.pH.x, DOH.rt[1], hmin.c.pH.z, 1.5, `ระยะราบถึงขอบสะพาน ${fmt(hmin.c.h)} ม.`, hmin.c.h >= 1.8 ? NEW : BAD, polesG);
+    }
+  }
+
+  // ---------- status panel ----------
+  function phaseTable(arr) {
+    return '<table class="ph"><tr><th>เฟส</th><th>สูงจุดยึด</th><th>ราบถึงขอบสะพาน</th><th>ดิ่งเหนือ deck</th><th>6.10</th><th>7.50</th></tr>' +
+      arr.map(p => { const v = p.c.over ? p.c.vDeck : p.c.vRoad, k = vOk(v);
+        return `<tr><td>${p.kind} ${p.i + 1} (${fmt(p.dz)})${p.moved ? ' ย้าย' : ''}</td><td>${f2(p.h)}</td><td>${p.c.over ? '<span class="st-warn">เหนือพื้น</span>' : f2(p.c.h) + ' ' + ok(p.c.h >= 1.8, '✓', '✗')}</td>` +
+          `<td>${p.c.over ? f2(p.c.vDeck) : isFinite(p.c.vRoad) ? '(ถนน) ' + f2(p.c.vRoad) : '-'}</td><td>${isFinite(v) ? ok(k.a, '✓', '✗') : '-'}</td><td>${isFinite(v) ? ok(k.b, '✓', '✗') : '-'}</td></tr>`; }).join('') + '</table>';
+  }
+  function status() {
+    const el = document.getElementById('status'), pl = S.pl, cross = S.span115[1];
+    const eN = edgeW(P115[2][0]), dN = -P115[2][1] - eN;
+    const lowTxt = d => d >= P.low ? `อยู่นอก L.O.W. (${fmt(P.low)} ม., ค่าสมมติ)` : `<span class="st-bad">อยู่ใน L.O.W. (${fmt(P.low)} ม., ค่าสมมติ)</span>`;
+    const rowTxt = o => Math.abs(o) <= P.ROW / 2 ? 'อยู่ในเขตทาง (ค่าสมมติ)' : '<span class="st-warn">อยู่นอกเขตทาง (ค่าสมมติ)</span>';
+    const v115 = num('v115');
+    const hfEdge = HF.map(([x, z], i) => { const poles = i ? DOH.hfN : DOH.hfS; return Math.min(...poles.map(([px, o]) => -o - edgeE(px))); });
+    if (P.mode === 0) {
+      el.innerHTML = `<div class="big">สภาพปัจจุบัน</div><div>สะพานเดิม Plank girder 15 × 10 = 150 ม. (ตำแหน่ง/ระดับในโมเดลเป็นค่าสมมติ) ฝั่งตะวันตก 115 kV วงจรเดี่ยว สายคู่ 2 × 400 ตร.มม. มี 22 kV พาดใต้ ช่วงข้าม ${fmt(L115)} ม. (เสา along ${fmt(P115[1][0])} ถึง ${fmt(P115[2][0])}) ฝั่งตะวันออก H-Frame 22 kV วงจรบน ACSR วงจรล่าง 120 SAC ช่วง ${fmt(L22)} ม. ตำแหน่งเสาตามแปลน ทล.</div>`;
+    } else if (P.mode === 1) {
+      const n22 = pl.acsr.filter(pl.enc).length, c = cross.c;
+      el.innerHTML = `<div class="big st-bad">สะพานใหม่ตามแบบ ทล.: จุดขัดแย้ง</div>` +
+        `<div><b class="st-bad">1.</b> เสา 115 kV ฝั่งใต้ (along ${fmt(P115[1][0])}, offset ${fmt(-P115[1][1])}) อยู่ในแผ่นพื้นทางเข้า LT. (along ${fmt(DOH.slab[0])} ถึง ${fmt(DOH.abut[0])}, offset +1.5 ถึง +14.5) <span class="st-bad">ต้องย้าย</span></div>` +
+        `<div><b class="st-warn">2.</b> เสา 115 kV ฝั่งเหนือ (along ${fmt(P115[2][0])}) อยู่เลยแผ่นพื้นทางเข้า ${fmt(P115[2][0] - DOH.slab[1])} ม. ศูนย์กลางเสาห่างขอบถนนที่เรียวลง ${fmt(dN)} ม. ${lowTxt(dN - 0.35)} ใกล้ลาดคันทาง</div>` +
+        `<div><b class="st-warn">3.</b> 115 kV ช่วงข้าม ${fmt(cross.L)} ม. พาดเหนือ deck LT. ตลอดความยาว (สายห่างแกน offset ประมาณ ${fmt(-(c.pDeck ? c.pDeck.z : NaN))} ม.) หย่อน ${fmt(cross.s)} ม. ที่ ${num('tA')} °C ต่ำสุดเหนือ deck ${fmt(c.vDeck)} ม. เกณฑ์ ${fmt(v115)} ม. (ค่าสมมติ) ${ok(c.vDeck >= v115)} 22 kV ใต้ 115 kV เหนือ deck ${fmt(cross.c22.vDeck)} ม. 6.10 ${ok(vOk(cross.c22.vDeck).a)} 7.50 ${ok(vOk(cross.c22.vDeck).b)}</div>` +
+        `<div><b class="${n22 ? 'st-bad' : 'st-ok'}">4.</b> 22 kV H-Frame ช่วง ${fmt(L22)} ม. ACSR ล้ำแนวสะพาน RT. ${n22} เฟส (อยู่เหนือพื้นสะพาน หรือห่างขอบ &lt; 1.80 ม.)</div>` + phaseTable([...pl.acsr, ...pl.sac]) +
+        `<div>เสา H-Frame ห่างขอบถนน ใต้ ${fmt(hfEdge[0])} ม. เหนือ ${fmt(hfEdge[1])} ม. (ขอบเสาต้นใกล้ถนน)</div>` +
+        `<div style="color:var(--muted);font-size:13px">สะพานเดิมรื้อออกแล้ว ความสูงจุดยึด 22 kV ระยะหย่อน ระดับดินที่โคนเสา R.O.W./L.O.W. เป็นค่าสมมติ ปรับได้ที่แถบด้านขวา</div>`;
+    } else if (P.mode === 2) {
+      const mv = pl.moved, okH = mv.every(p => p.c.over ? false : p.c.h >= 1.8), okV = mv.every(p => vOk(p.c.over ? p.c.vDeck : p.c.vRoad).b || !isFinite(p.c.over ? p.c.vDeck : p.c.vRoad));
+      const n = mv.filter(p => p.moved).length, still = mv.filter(p => p.c.over).length;
+      el.innerHTML = `<div class="big ${okH && okV ? 'st-ok' : 'st-warn'}">แผนงาน 22 kV: ใช้ H-Frame เดิม</div>` +
+        `<div>เอาวงจร 120 SAC ออก ย้าย ACSR ที่ล้ำแนวสะพาน ${n} เฟส ลงลูกถ้วยวงจรล่าง (ตำแหน่ง SAC เดิม) สูง ${f2(pl.hL)} ม. ตำแหน่งทางราบ ${pl.low.map(fmt).join(' / ')} ม. (ค่าสมมติ)</div>` + phaseTable(mv) +
+        `<div>ระยะทางราบถึงขอบสะพาน เกณฑ์ 1.80 ม. ${ok(okH)}${still ? ` (ยังมี ${still} เฟสอยู่เหนือพื้นสะพาน ต้องใช้เกณฑ์แนวดิ่งและได้รับอนุญาต ทล.)` : ''}</div>` +
+        `<div>ระยะดิ่งเหนือพื้นสะพาน/ผิวทาง เกณฑ์ 7.50 ม. ${ok(okV)}</div>` +
+        `<div style="color:var(--warn)">ยังต้องตรวจ: อุปกรณ์จับปลายสาย/แคล้มป์ตำแหน่ง SAC เดิมใช้กับ ACSR ได้หรือไม่ แรงดึงและระยะหย่อนจริงช่วง ${fmt(L22)} ม. ระยะห่างระหว่างเฟสเมื่อย้ายลง</div>` +
+        `<div style="color:var(--muted);font-size:13px">ถ้าลูกถ้วยวงจรล่างอยู่ตำแหน่งทางราบเดียวกับวงจรบน การย้ายลงไม่ได้เพิ่มระยะทางราบ ให้กรอกตำแหน่งจริงจากการสำรวจ</div>`;
+    } else {
+      const m = [num('mvA'), num('mvO')], e = m[0] < 0 ? edgeW(m[0]) : edgeW(m[0]), d = m[1] - e, inSlab = onSlab(m[0]) && m[1] <= 14.5;
+      const sp = S.span115, c = sp[1].c, Lmax = Math.max(sp[0].L, sp[1].L);
+      const ang = (() => { const a = sp[0].a, b = sp[0].b, q = sp[1].b, u = [b[0] - a[0], b[1] - a[1]], w = [q[0] - b[0], q[1] - b[1]];
+        return Math.abs(Math.atan2(u[0] * w[1] - u[1] * w[0], u[0] * w[0] + u[1] * w[1])) * 180 / Math.PI; })();
+      el.innerHTML = `<div class="big ${!inSlab && d >= P.low && c.vDeck >= num('v115') ? 'st-ok' : 'st-warn'}">ทางเลือก: ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)</div>` +
+        `<div>ตำแหน่งใหม่ along ${fmt(m[0])} offset ${fmt(m[1])} ${inSlab ? '<span class="st-bad">ยังอยู่ในแผ่นพื้นทางเข้า</span>' : 'พ้นแผ่นพื้นทางเข้า'} ห่างขอบถนน ${fmt(d)} ม. ${lowTxt(d - 0.35)} ${rowTxt(m[1])}</div>` +
+        `<div>ช่วงใหม่: ต้นถัดไป ${fmt(sp[0].L)} ม. ช่วงข้าม ${fmt(sp[1].L)} ม. ${Lmax > 200 ? '<span class="st-bad">เกินช่วงยาว LS 200 ม.</span>' : Lmax > 80 ? '<span class="st-warn">เกินช่วงทางตรง SS/SD 80 ม. ต้องเป็นโครงสร้างช่วงยาว LS (≤ 200 ม.)</span>' : ''} มุมเบี่ยงที่เสาใหม่ ${fmt(ang)}° ${ang > 2 ? '(เกิน 2° ต้องใช้แบบทางโค้ง/หัวมุม)' : ''}</div>` +
+        `<div>115 kV ต่ำสุดเหนือ deck LT. ${fmt(c.vDeck)} ม. (หย่อน ${fmt(sp[1].s)} ม.) เกณฑ์ ${fmt(num('v115'))} ม. (ค่าสมมติ) ${ok(c.vDeck >= num('v115'))} 22 kV ใต้ 115 kV ${fmt(sp[1].c22.vDeck)} ม. 7.50 ${ok(vOk(sp[1].c22.vDeck).b)}</div>` +
+        `<div style="color:var(--warn)">เสาฝั่งเหนือยังห่างขอบถนน ${fmt(dN)} ม. กฟข. เป็นผู้ออกแบบ 115 kV ตำแหน่งนี้ใช้เพื่อประกอบการหารือเท่านั้น</div>`;
+    }
+    // sag table (115 kV)
+    const T = num('tA'), U = num('cu') * 1e3, pc = v => isNaN(v) ? '-' : (100 * v / U).toFixed(1) + '%';
+    document.getElementById('res').innerHTML = `<tr><th>ช่วง 115 kV</th><th>หย่อน 25 °C</th><th>${T} °C</th><th>ต่ำสุด+ลม</th></tr>` +
+      S.span115.map(s => { const H = H25(s.L), t1 = tensionAt(s.L, num('tmin'), true, H);
+        return `<tr><td>${fmt(s.a[0])} → ${fmt(s.b[0])} (${fmt(s.L)} ม.)</td><td>${f2(sagAt(s.L, 25))}</td><td>${f2(sagAt(s.L, T))}</td><td>${pc(t1)} ${t1 <= 0.5 * U + 1e-9 ? '<span class="st-ok">ผ่าน</span>' : '<span class="st-bad">เกิน</span>'}</td></tr>`; }).join('');
+  }
+
+  // ---------- PEA GIS overlay (read 14 Nov 2026): x along road from km 6+085, z across (+RT), m; height m ----------
+  const GIS_POLES = [[-111.3, -13.4, 22, "HV", "SS-SA-2"], [-103.6, 17.9, 16, "MV", "Tower"], [-103.5, 14.0, 16, "MV", "Tower"], [-75.1, -14.2, 22, "HV", "ทางตรง"], [-72.8, -14.3, 22, "HV", "ทางตรง"], [86.7, -12.2, 22, "HV", "ทางตรง"], [88.3, -12.0, 22, "HV", "ทางตรง"], [105.9, 31.0, 12, "MV", "DDE"], [107.0, 15.8, 12, "MV", "DE"], [117.2, 17.1, 16, "MV", "Tower"], [117.3, 14.6, 16, "MV", "Tower"], [129.6, -11.4, 22, "HV", "SS-SA-2"]];
+  const GIS_LINES = [["115", "3-400A", [-130, -8.4], [-105.5, -9.3]], ["115", "3-400A", [-105.5, -9.3], [-69.2, -10.0]], ["115", "3-400A", [-69.2, -10.0], [92.5, -8.1]], ["115", "3-400A", [92.5, -8.1], [130, -7.4]], ["22", "3-50ACSR", [111.6, 7.0], [116.7, 6.1]], ["22", "3-50ACSR", [116.7, 6.1], [130, 6.5]], ["22", "3-185PIC", [88.3, -8.0], [129.4, -7.4]], ["22", "3-185PIC", [-75.3, -10.2], [-111.1, -9.4]], ["22", "3-185PIC", [-111.1, -9.4], [-130, -8.7]], ["22", "3-185A", [88.3, -8.0], [-75.3, -10.2]], ["22", "3-120A", [-130, 10.1], [-103.8, 8.1]], ["22", "3-120A", [-103.8, 8.1], [106.9, 9.9]], ["22", "3-120A", [106.9, 9.9], [117.9, 8.3]], ["22", "3-120A", [117.9, 8.3], [130, 8.6]], ["22", "3-120A", [118.2, 10.1], [130, 10.5]], ["22", "3-50ACSR", [111.6, 7.0], [111.7, 10.0]], ["22", "3-50ACSR", [111.7, 10.0], [110.1, 27.3]], ["22", "3-50ACSR", [110.1, 27.3], [109.8, 31.5]], ["22", "3-120A", [-130, 12.1], [-103.7, 10.1]], ["22", "3-120A", [-103.7, 10.1], [107.3, 11.8]], ["22", "3-120A", [107.3, 11.8], [118.2, 10.1]], ["22", "3-185PIC", [129.4, -7.4], [130, -7.4]]];
+  const gisG = new THREE.Group(); scene.add(gisG); gisG.visible = false;
+  function buildGIS() {
+    gisG.clear();
+    const pm = M(0xd4a017), hv = B(0xd4a017), mv = B(0xb8860b), y0 = gy();
+    for (const [x, z, h, v, top] of GIS_POLES) { cyl(0.18, 0.28, h - 2, pm, x, y0, z, gisG);
+      put(gisG, `GIS ${v === 'HV' ? '115' : '22'} kV ${h} ม. ${top}`, x, y0 + h + 0.2, z, { size: 1.1, color: '#5c4400', border: '#d4a017' }); }
+    for (const [v, , a, b] of GIS_LINES) gisG.add(wire(V(a[0], y0 + (v === '115' ? 18 : 12), a[1]), V(b[0], y0 + (v === '115' ? 18 : 12), b[1]), 0, v === '115' ? hv : mv, 0.06));
+  }
+  document.getElementById('gisOn').addEventListener('change', e => { gisG.visible = e.target.checked; document.getElementById('gisNote').hidden = !e.target.checked; });
+  document.getElementById('hwlOn').addEventListener('change', e => { hwlG.visible = e.target.checked; });
+
+  function rebuild() {
+    buildTerrain(); buildOld(); buildNew(); buildROW(); buildPoles(); buildGIS();
+    oldG.visible = P.mode === 0; newG.visible = P.mode >= 1;
+    document.getElementById('secMove').style.display = P.mode === 3 ? '' : 'none';
+    status();
+    if (!document.getElementById('boqv').hidden) renderBoq();
+    document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.mode === P.mode)));
+  }
+
+  // ---------- controls ----------
+  const bind = (id, key) => { const i = document.getElementById(id), o = document.getElementById(id + 'o');
+    const upd = () => { P[key] = parseFloat(i.value); o.textContent = fmt(P[key]); };
+    upd(); i.addEventListener('input', () => { upd(); rebuild(); }); };
+  bind('row', 'ROW'); bind('low', 'low');
+  document.getElementById('g0').addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { P.g0 = v; rebuild(); } });
+  document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => { P.mode = +b.dataset.mode; rebuild(); }));
+  for (const id of ['cw', 'ca', 'ce', 'cal', 'ch', 'tA', 'cd', 'cu', 'tmin', 'tavg', 'qc', 'v115', 'hTop', 'hLow', 'dzTop', 'dzLow', 'sag22', 'sagSac', 'mvA', 'mvO'])
+    document.getElementById(id).addEventListener('input', rebuild);
+
+  const views = {
+    v3d: [[150, 85, 175], [0, -2, 0]],
+    vtop: [[-1, 430, 0.01], [0, 0, 0]],                  // tiny −x offset keeps north (+x) at the top of the screen
+    vroad: [[-175, 7, -2], [0, 4, -2]],
+    vside: [[0, 3, 150], [0, -1, 0]],
+    v22: [[-190, 24, 48], [0, 4, 8]],
+    vunder: [[-36, -4, 32], [-50, -4.5, 0]],
+    vdet: [[P115[0][0] + 9, 19.5, P115[0][1] + 10], [P115[0][0], 16.5, P115[0][1] + 1.2]],
+  };
+  let tween = null;
+  function go(name, instant) {
+    const [p, t] = views[name];
+    if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) { camera.position.set(...p); controls.target.set(...t); controls.update(); return; }
+    tween = { from: camera.position.clone(), to: V(...p), tf: controls.target.clone(), tt: V(...t), k: 0 };
+  }
+  for (const id of Object.keys(views)) document.getElementById(id).addEventListener('click', () => go(id));
+
+  // ================= BOQ =================
+  const BOM = {
+    '5264A': [['เสา คอร. 22 ม. มีกราวด์เพลทในเสา', 1, 'ต้น', '00010015'], ['เหล็กราง 100×50×5 ยาว 2,250 มม.', 3, 'ท่อน', '01000100'], ['เหล็กค้ำคอน 50×50×6 ยาว 1,000 มม.', 3, 'ชิ้น', '01200009'],
+      ['สลักเกลียว M16×130', 3, 'ตัว', '01110200'], ['สลักเกลียว M16×300', 1, 'ตัว', '01110204'], ['สลักเกลียว M16×350', 2, 'ตัว', '01110205'],
+      ['สลักเกลียว M20×350', 3, 'ตัว', '01110300'], ['สลักห่วงวงรี M16×150', 3, 'ตัว', '01150000'], ['แหวนสี่เหลี่ยมแบน 52×52×4.5', 12, 'ตัว', '01180100'],
+      ['แหวนสี่เหลี่ยมแบน 62×62×6', 6, 'ตัว', '01180101'], ['แหวนสปริง M16', 3, 'ตัว', '01180301'], ['ชุดลูกถ้วยแขวน (D-17C)', 3, 'ชุด', 'D-17C'],
+      ['ชุดสายล่อฟ้า (D-51)', 1, 'ชุด', 'D-51'], ['ฐานรากเสา (D-10A)', 1, 'ชุด', 'D-10A'], ['การต่อลงดิน (D-25)', 1, 'ชุด', 'D-25']],
+  };
+  const MODE_N = { 2: '3 แผนงาน 22 kV (H-Frame เดิม)', 3: '4 ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)' };
+  function boqRows() {
+    const R = [], m = v => Math.ceil(v), sec = t => R.push({ sec: t }), it = (d, ref, q, u, key = d) => R.push({ d, ref, q, u, key });
+    const asm = (d, ref, n) => { R.push({ d: `${d} ×${n} ชุด`, ref: 'แบบ ' + ref, asm: true });
+      for (const [bd, q, u, code] of BOM[ref]) R.push({ d: bd, ref: code, q: q == null ? null : q * n, u, key: ref + ':' + bd, sub: true }); };
+    if (P.mode === 2) {
+      const n = S.pl.moved.filter(p => p.moved).length;
+      sec('งานรื้อถอน');
+      it('รื้อวงจร 120 SAC ช่วงข้ามสะพาน (ความยาวช่วง × 3 เฟส)', 'ผู้ใช้แจ้ง', m(L22 * 3), 'ม.', 'rm:sac');
+      sec('งานติดตั้ง');
+      it('ย้ายสาย ACSR ลงลูกถ้วยวงจรล่าง (ปลายละ 1 จุดต่อเฟส)', '—', 2 * n, 'จุด', 'mvacsr');
+      it('สเตรนแคลมป์ Al/ACSR (เฉพาะถ้าของเดิมใช้กับ ACSR ไม่ได้)', '03110000', 2 * n, 'ชุด', 'clamp');
+      it('ปรับระยะหย่อนสาย ACSR ช่วงข้าม', '—', n, 'เฟส', 'resag');
+    } else if (P.mode === 3) {
+      const sp = S.span115;
+      sec('งานรื้อถอน');
+      it('รื้อถอนโครงสร้าง 115/22 kV เดิมฝั่งใต้ (หัวสะพาน)', '—', 1, 'ชุด', 'rm:t');
+      it('รื้อสาย 115 kV เดิม 2 ช่วงข้างเสาที่ย้าย (3 เฟส × สายคู่)', '3-400A', m((Math.hypot(P115[1][0] - P115[0][0], P115[1][1] - P115[0][1]) + L115) * 6), 'ม.', 'rm:c115');
+      sec('งานติดตั้ง');
+      asm('โครงสร้าง 115/22 kV ตำแหน่งใหม่ (แทนด้วย 5264A ไว้ก่อน)', '5264A', 1);
+      it('สาย 115 kV ใหม่ 2 ช่วง (3 เฟส × สายคู่)', '3-400A', m((sp[0].L + sp[1].L) * 6), 'ม.', 'c115');
+      it('สาย 22 kV พาดใต้ใหม่ 2 ช่วง', '3-185A', m((sp[0].L + sp[1].L) * 3), 'ม.', 'c22u');
+    }
+    return R;
+  }
+  const priceKey = k => 'tl222-boq:' + k;
+  const getPrice = k => { try { return parseFloat(localStorage.getItem(priceKey(k))) || 0; } catch (e) { return 0; } };
+  const money = v => v.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function renderBoq() {
+    const T = document.getElementById('boqT');
+    document.querySelectorAll('#boqv [data-bm]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.bm === P.mode)));
+    if (P.mode < 2) { document.getElementById('boqTitle').textContent = 'ปริมาณงาน (BOQ)';
+      T.innerHTML = '<tr><td>เลือกขั้นที่ 3 หรือ 4 ด้านบนก่อน (ขั้นที่ 1–2 ยังไม่มีงานก่อสร้าง)</td></tr>'; document.getElementById('boqNote').textContent = ''; return; }
+    document.getElementById('boqTitle').textContent = 'ปริมาณงาน (BOQ): ' + MODE_N[P.mode];
+    const R = boqRows(); let no = 0;
+    T.innerHTML = '<tr><th>ลำดับ</th><th>รายการ</th><th>แบบ / รหัสพัสดุ</th><th>จำนวน</th><th>หน่วย</th><th>ราคาต่อหน่วย (บาท)</th><th>รวม (บาท)</th></tr>' +
+      R.map(r => r.sec ? `<tr class="sec"><td colspan="7">${r.sec}</td></tr>` :
+        r.asm ? `<tr class="asm"><td>${++no}</td><td>${r.d}</td><td class="ref">${r.ref}</td><td></td><td></td><td></td><td></td></tr>` :
+        `<tr class="${r.sub ? 'sub' : ''}"><td>${r.sub ? '' : ++no}</td><td>${r.d}</td><td class="ref">${r.ref}</td><td>${r.q == null ? 'ตามหน้างาน' : r.q.toLocaleString('th-TH')}</td><td>${r.u}</td>` +
+        `<td><input type="number" min="0" step="any" inputmode="decimal" aria-label="ราคาต่อหน่วย ${r.d}" data-k="${r.key}" data-q="${r.q == null ? '' : r.q}" value="${getPrice(r.key) || ''}"></td><td class="amt"></td></tr>`).join('') +
+      '<tr class="tot"><td></td><td colspan="5">รวมทั้งสิ้น (เฉพาะรายการที่กรอกราคา)</td><td id="boqSum"></td></tr>';
+    const sum = () => { let t = 0;
+      T.querySelectorAll('input[data-k]').forEach(i => { const q = parseFloat(i.dataset.q), pr = parseFloat(i.value) || 0, a = isNaN(q) ? 0 : q * pr;
+        t += a; i.closest('tr').querySelector('.amt').textContent = a ? money(a) : ''; });
+      document.getElementById('boqSum').textContent = money(t); };
+    T.querySelectorAll('input[data-k]').forEach(i => i.addEventListener('input', () => {
+      try { localStorage.setItem(priceKey(i.dataset.k), i.value); } catch (e) {}
+      T.querySelectorAll(`input[data-k="${CSS.escape(i.dataset.k)}"]`).forEach(o => { if (o !== i) o.value = i.value; }); sum(); }));
+    sum();
+    document.getElementById('boqNote').textContent = 'ข้อจำกัด: ความยาวสายเป็นความยาวตามช่วงในโมเดล ยังไม่รวมระยะหย่อนและเผื่อต่อสาย โครงสร้าง 115 kV แทนด้วยแบบ 5264A (ทางตรง) ไว้ก่อน ต้องเปลี่ยนตามที่ กฟข. ออกแบบ จำนวนเฟสที่ย้ายนับจากค่าสมมติตำแหน่งสาย ต้องยืนยันจากการสำรวจ';
+  }
+  document.getElementById('boqOpen').onclick = () => { document.getElementById('boqv').hidden = false; renderBoq(); };
+  document.getElementById('boqClose').onclick = () => { document.getElementById('boqv').hidden = true; };
+  document.querySelectorAll('#boqv [data-bm]').forEach(b => b.addEventListener('click', () => { P.mode = +b.dataset.bm; rebuild(); }));
+  document.getElementById('boqCopy').onclick = async () => {
+    const rows = [...document.querySelectorAll('#boqT tr')].map(tr => [...tr.children].map(td => { const i = td.querySelector('input'); return (i ? i.value : td.textContent).trim(); }).join('\t'));
+    try { await navigator.clipboard.writeText(rows.join('\n')); document.getElementById('boqCopy').textContent = 'คัดลอกแล้ว'; }
+    catch (e) { document.getElementById('boqCopy').textContent = 'คัดลอกไม่ได้ ให้ลากเลือกตารางเอง'; }
+    setTimeout(() => { document.getElementById('boqCopy').textContent = 'คัดลอกตาราง (วางใน Excel)'; }, 1800);
+  };
+
+  // URL hash picks a starting step/view (used for printable stills): #s0-v3d etc.; #boq opens the BOQ
+  const h = (location.hash || '').match(/^#s([0-3])-(v3d|vtop|vroad|vside|v22|vunder|vdet)$/);
+  if (h) P.mode = +h[1];
+  rebuild(); go(h ? h[2] : 'v3d', true);
+  if ((location.hash || '') === '#boq') { P.mode = 2; rebuild(); document.getElementById('boqv').hidden = false; renderBoq(); }
+
+  function resize() {
+    const r = canvas.parentElement.getBoundingClientRect();
+    renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(r.height, 1); camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(canvas.parentElement); resize();
+  const _v = new THREE.Vector3();
+  (function loop() {
+    if (tween) { tween.k = Math.min(1, tween.k + 0.045); const e = 1 - Math.pow(1 - tween.k, 3);
+      camera.position.lerpVectors(tween.from, tween.to, e); controls.target.lerpVectors(tween.tf, tween.tt, e); if (tween.k >= 1) tween = null; }
+    controls.update();
+    scene.traverse(o => { if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = d > 12; } });
+    renderer.render(scene, camera); requestAnimationFrame(loop);
+  })();
+  window.__ready = true; window.__S = () => S;
+})();
+</script>
