@@ -161,8 +161,9 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <div class="field"><label for="low">L.O.W. ห่างขอบทาง/ขอบสะพานใหม่ (รอแขวงทางหลวง)</label><output id="lowo"></output>
         <input id="low" type="range" min="0" max="10" step="0.5" value="1.5"></div>
       <div class="calc">
-        <label for="g0">ระดับดินที่โคนเสา (ม. รทก.)</label><input id="g0" type="number" step="0.1" value="99.0">
-        <p class="assume">ค่าสมมติ: แบบมีระดับดินเฉพาะใต้สะพาน ปลายสะพาน 98.91 / 99.02</p>
+        <label for="demPole">ใช้ระดับโคนเสาจาก DEM</label><input id="demPole" type="checkbox" checked style="width:auto;justify-self:end">
+        <label for="g0">ระดับดินที่โคนเสา (ม.) ถ้าไม่ใช้ DEM</label><input id="g0" type="number" step="0.1" value="99.0">
+        <p class="assume">ค่าสมมติ: ค่าตั้งต้นใช้ระดับโคนเสาแต่ละต้นจาก Copernicus DEM (เลื่อนระดับตามค่าปรับในส่วนสัญลักษณ์) ซึ่งคลาดได้หลายเมตร ถ้าไม่ใช้ DEM จะใช้ค่าเดียวนี้ทุกต้น (แบบมีระดับดินเฉพาะใต้สะพาน ปลายสะพาน 98.91 / 99.02)</p>
         <label for="v115">เกณฑ์ระยะดิ่ง 115 kV เหนือผิวทาง (ม.)</label><input id="v115" type="number" step="0.1" value="8.5">
         <p class="assume">ค่าสมมติ: ยังไม่พบเกณฑ์ในเอกสาร กฟภ. ที่มี</p>
       </div>
@@ -249,7 +250,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <div><span style="background:#1f9a55"></span>งานใหม่ / ย้ายแล้ว</div>
         <div><span style="background:#2f6fd0"></span>R.O.W. (ค่าสมมติ)</div>
         <div><span style="background:#d07a1a"></span>L.O.W. (ค่าสมมติ)</div>
-        <label><input type="checkbox" id="demOn"> <span style="background:linear-gradient(90deg,#2f7d4f,#d9c36a,#b0643a)"></span>ภูมิประเทศ Copernicus DEM 30 ม.</label>
+        <label><input type="checkbox" id="demOn" checked> <span style="background:linear-gradient(90deg,#2f7d4f,#d9c36a,#b0643a)"></span>ภูมิประเทศ Copernicus DEM 30 ม.</label>
         <div class="calc" id="demBox" hidden><label for="demOff">ปรับระดับ DEM ให้ตรงแบบ ทล. (ม.)</label><input id="demOff" type="number" step="0.1" value="-65.4">
           <p class="assume" id="demNote"></p></div>
         <label><input type="checkbox" id="hwlOn" checked> <span style="background:#5f8fa8"></span>ระดับน้ำสูงสุด H.W.L. 97.300</label>
@@ -416,7 +417,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const fmt = v => isNaN(v) ? '-' : (Math.round(v * 10) / 10).toLocaleString('th-TH', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const f2 = v => isNaN(v) ? '-' : v.toFixed(2);
   const ok = (good, t1 = 'ผ่าน', t0 = 'ไม่ผ่าน') => good ? `<span class="st-ok">${t1}</span>` : `<span class="st-bad">${t0}</span>`;
-  const gy = () => P.g0 - DOH.deck;                    // pole base level in model y
+  const demPole = () => document.getElementById('demPole').checked;
+  const gy = (x, z) => (x !== undefined && demPole() ? demAt(x, z) + num('demOff') : P.g0) - DOH.deck;   // pole base: DEM (shifted) or the single assumed level                    // pole base level in model y
 
   // ---------- terrain: ground profile under the bridge (DOH longitudinal section), flat beyond at the assumed level ----------
   const terrain = new THREE.Group(); scene.add(terrain);
@@ -522,14 +524,14 @@ table.ph th { color: var(--muted); font-weight: 600; }
     if (m !== mat.pole && m !== mat.poleNew) o.traverse(c => { if (c.isMesh) c.material = m; if (c.isLineSegments) c.visible = false; });
     g.add(o); return o;
   }
-  const grp = (x, z, parent) => { const g = new THREE.Group(); g.position.set(x, gy(), z); parent.add(g); return g; };
+  const grp = (x, z, parent) => { const g = new THREE.Group(); g.position.set(x, gy(x, z), z); parent.add(g); return g; };
   function tall(x, z, m, parent, h = POLE_TOP) { const g = grp(x, z, parent);
     cyl(0.2, 0.35, h, m, 0, 0, 0, g);
     if (PARTS) part('SDTG3', m, g, h); else { for (const y of HV_YS) box(0.18, 0.18, 2.4, mat.steel, 0, y + STRING + h - POLE_TOP, 1.2, g); box(0.14, 0.14, 2.6, mat.steel, 0, Y22 - PIN22 + h - POLE_TOP, 1.4, g); }
     return g; }
   // 115 kV conductor points of an SD-TG-3 pole (world): hv = 3 phases x 2 sub-conductors, mv = 22 kV underbuilt
   function hvPts(x, z, h = POLE_TOP) {
-    const b = V(x, gy() + h - POLE_TOP, z);
+    const b = V(x, gy(x, z) + h - POLE_TOP, z);
     if (PARTS) { const S = PARTS.SDTG3.pts, w = p => V(p.x, POLE_TOP + p.y, p.z).add(b); return { hv: ['hv0', 'hv1', 'hv2'].flatMap(k => S[k].map(w)), mv: S.mv.map(w) }; }
     return { hv: HV_YS.flatMap(y => [-0.2, 0.2].map(d => V(0, y, 2.2 + d).add(b))), mv: [0.7, 1.5, 2.3].map(d => V(0, Y22, d).add(b)) };
   }
@@ -546,7 +548,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     cyl(0.12, 0.2, h, m, 0, 0, 0, g); if (PARTS) part(kind, m, g, h); else box(0.14, 0.14, 2.4, mat.arm, 0, h - 0.6, 0, g); return g; }
   function ring(x, z, r, color, parent) {
     const m = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.5, 40), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: .85 }));
-    m.rotation.x = -Math.PI / 2; m.position.set(x, Math.max(gy(), 0) + 0.08, z); parent.add(m);
+    m.rotation.x = -Math.PI / 2; m.position.set(x, Math.max(gy(x, z), 0) + 0.08, z); parent.add(m);
   }
   function vdim(p, txt, opts, parent, y0 = 0) {   // vertical dimension from the deck/road surface to a conductor point
     line([V(p.x, y0, p.z), p.clone()], opts === BAD ? lineMat.dimBad : lineMat.dim, parent);
@@ -607,7 +609,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const L115 = Math.hypot(P115[2][0] - P115[1][0], P115[2][1] - P115[1][1]);
   function plan22() {
     const top = list('dzTop'), low = list('dzLow'), hT = num('hTop'), hL = num('hLow'), s = num('sag22'), sS = num('sagSac');
-    const end = (i, dz, h) => V(HF[i][0], gy() + h, HF[i][1] + dz);
+    const end = (i, dz, h) => V(HF[i][0], gy(...HF[i]) + h, HF[i][1] + dz);
     const ph = (dz, h, sag, kind, i) => { const a = end(0, dz, h), b = end(1, dz, h); return { kind, i, dz, h, a, b, sag, c: clearance(a, b, sag) }; };
     const acsr = top.map((dz, i) => ph(dz, hT, s, 'ACSR', i)), sac = low.map((dz, i) => ph(dz, hL, sS, 'SAC', i));
     const enc = p => p.c.over || p.c.h < 1.8;                         // conductor over the bridge or closer than 1.80 m to its edge
@@ -621,7 +623,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const base = [...list('dzTop').map(d => ({ h: hT, dz: d, n: 'บน' })), ...list('dzLow').map(d => ({ h: hL, dz: d, n: 'ล่าง' }))];
     const slS = base, slN = base.slice(), x3 = document.getElementById('x3On').checked;
     if (x3) slN.push({ h: num('x3h'), dz: num('x3dz'), n: 'เพิ่ม', extra: true });
-    const end = (i, sl) => V(HF[i][0], gy() + sl.h, HF[i][1] + sl.dz), K = 60;
+    const end = (i, sl) => V(HF[i][0], gy(...HF[i]) + sl.h, HF[i][1] + sl.dz), K = 60;
     const Q = slS.map(a => slN.map(b => { const A = end(0, a), Bp = end(1, b), pts = []; let over = 0, h = Infinity;
       for (let k = 0; k <= K; k++) { const p = spanPt(A, Bp, s, k / K); pts.push(p); if (onSlab(p.x) && inDeck(p.z)) over++; if (onBridge(p.x)) h = Math.min(h, deckGap(p.z)); }
       return { A, B: Bp, pts, over, h, clear: over === 0 && h >= 1.8 }; }));
@@ -708,11 +710,11 @@ table.ph th { color: var(--muted); font-weight: 600; }
       if (mode >= 1 && i === 1) m = mode === 3 ? mat.poleGhost : mat.poleBad;
       if (mode >= 1 && i === 2) m = mat.poleWarn;
       tag(tall(x, z, m, polesG), `${names[i]} along ${fmt(x)}`, 'hv', POLE_TOP);
-      if (mode >= 1 && i === 1) { ring(x, z, 1.4, 0xc0262d, polesG); put(polesG, mode === 3 ? 'รื้อถอน' : 'อยู่ในแผ่นพื้นทางเข้า ต้องย้าย', x, gy() + 22, z, BAD); }
+      if (mode >= 1 && i === 1) { ring(x, z, 1.4, 0xc0262d, polesG); put(polesG, mode === 3 ? 'รื้อถอน' : 'อยู่ในแผ่นพื้นทางเข้า ต้องย้าย', x, gy(x, z) + 22, z, BAD); }
       if (mode >= 1 && i === 2) { ring(x, z, 1.4, 0xe5934d, polesG); const e = edgeW(x);
-        hdim(x, -e, z, 1.0, `ห่างขอบถนน ${fmt(-z - e)} ม.`, WARN, polesG); put(polesG, 'ใกล้ขอบถนน / ลาดคันทาง', x, gy() + 22, z, WARN); }
+        hdim(x, -e, z, 1.0, `ห่างขอบถนน ${fmt(-z - e)} ม.`, WARN, polesG); put(polesG, 'ใกล้ขอบถนน / ลาดคันทาง', x, gy(x, z) + 22, z, WARN); }
     });
-    if (sMoved) { tag(tall(sMoved[0], sMoved[1], mat.poleNew, polesG), `115 kV ตำแหน่งใหม่ along ${fmt(sMoved[0])} (ค่าสมมติ)`, 'hv', POLE_TOP); put(polesG, `เสา 115 kV ตำแหน่งใหม่ (ค่าสมมติ)`, sMoved[0], gy() + 22, sMoved[1], NEW); }
+    if (sMoved) { tag(tall(sMoved[0], sMoved[1], mat.poleNew, polesG), `115 kV ตำแหน่งใหม่ along ${fmt(sMoved[0])} (ค่าสมมติ)`, 'hv', POLE_TOP); put(polesG, `เสา 115 kV ตำแหน่งใหม่ (ค่าสมมติ)`, sMoved[0], gy(...sMoved) + 22, sMoved[1], NEW); }
     const hvM = (i) => mode === 3 && i <= 1 ? lineMat.neuHv : lineMat.hv;
     const pts = line115.map(([x, z]) => hvPts(x, z));
     // beyond the model edge
@@ -740,11 +742,11 @@ table.ph th { color: var(--muted); font-weight: 600; }
     // ---- 22 kV H-Frames on RT + the single pole from the plan ----
     const low = { h: pl.hL, dz: pl.low };
     HF.forEach(([x, z], i) => { tag(hframe(x, z, mat.pole, polesG, pl.hT, low), `H-Frame 22 kV ${i ? 'ฝั่งเหนือ' : 'ฝั่งใต้'} along ${fmt(x)}`, 'hf', pl.hT + 0.15);
-      put(polesG, mode === 2 ? 'ใช้ H-Frame เดิม' : 'H-Frame 22 kV 2 วงจร', x, gy() + pl.hT + 2.2, z, mode === 2 ? NEW : { size: 1.5, color: '#6b4a1d' }); });
+      put(polesG, mode === 2 ? 'ใช้ H-Frame เดิม' : 'H-Frame 22 kV 2 วงจร', x, gy(x, z) + pl.hT + 2.2, z, mode === 2 ? NEW : { size: 1.5, color: '#6b4a1d' }); });
     tag(single(DOH.p22[0], Z(DOH.p22[1]), mat.pole, 10, polesG), `เสา 22 kV along ${fmt(DOH.p22[0])}`, 'mv', 10);
-    put(polesG, 'เสา 22 kV (แปลน ทล.)', DOH.p22[0], gy() + 12.2, Z(DOH.p22[1]), { size: 1.2 });
+    put(polesG, 'เสา 22 kV (แปลน ทล.)', DOH.p22[0], gy(DOH.p22[0], Z(DOH.p22[1])) + 12.2, Z(DOH.p22[1]), { size: 1.2 });
     // lines beyond the H-Frames
-    const out = (i, dz, h, m, sg) => { const x = HF[i][0], xe = i ? EXT : -EXT, z = HF[i][1] + dz; polesG.add(wire(V(x, gy() + h, z), V(xe, gy() + h, z), sg, m, 0.035)); };
+    const out = (i, dz, h, m, sg) => { const x = HF[i][0], xe = i ? EXT : -EXT, z = HF[i][1] + dz; polesG.add(wire(V(x, gy(...HF[i]) + h, z), V(xe, gy(...HF[i]) + h, z), sg, m, 0.035)); };
     pl.acsr.forEach(p => { out(0, p.dz, pl.hT, lineMat.acsr, 0.6); out(1, p.dz, pl.hT, lineMat.acsr, 0.6); });
     pl.sac.forEach(p => { out(0, p.dz, pl.hL, lineMat.sac, 0.6); out(1, p.dz, pl.hL, lineMat.sac, 0.6); });
     if (mode < 2) {
@@ -762,8 +764,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.ghost, 0.06)));
       ar.ph.forEach(p => { polesG.add(wire(p.a, p.b, p.sag, lineMat.neu, 0.045)); encDraw(p, polesG);
         const m = spanPt(p.a, p.b, p.sag, 0.5); put(polesG, `เฟส ${'ABC'[p.i]}`, m.x, m.y + 0.8, m.z + 0.8, { size: 1.0, color: '#0f5a31', border: '#1f9a55' }); });
-      if (ar.x3) { const [x, z] = HF[1], d = num('x3dz'); boxXY(x - 0.1, x + 0.1, gy() + num('x3h') - 0.08, gy() + num('x3h') + 0.08, Math.min(-1.7, d - 0.3), Math.max(1.7, d + 0.3), mat.poleNew, polesG);
-        put(polesG, 'ตำแหน่งลูกถ้วยเพิ่ม (ค่าสมมติ)', x, gy() + num('x3h') - 1.4, z + d + 2, NEW); }
+      if (ar.x3) { const [x, z] = HF[1], d = num('x3dz'); boxXY(x - 0.1, x + 0.1, gy(x, z) + num('x3h') - 0.08, gy(x, z) + num('x3h') + 0.08, Math.min(-1.7, d - 0.3), Math.max(1.7, d + 0.3), mat.poleNew, polesG);
+        put(polesG, 'ตำแหน่งลูกถ้วยเพิ่ม (ค่าสมมติ)', x, gy(x, z) + num('x3h') - 1.4, z + d + 2, NEW); }
       put(polesG, `จัดเฟส ACSR ใหม่: พ้นแนวสะพาน ${ar.clear} จาก 3 เฟส`, 20, gy() + pl.hT + 1.5, HF[1][1] - 3, ar.clear === 3 ? NEW : BAD);
       const hmin = ar.ph.filter(p => !p.c.over).sort((p, q) => p.c.h - q.c.h)[0];
       if (hmin && hmin.c.pH) hdim(hmin.c.pH.x, DOH.rt[1], hmin.c.pH.z, 1.5, `ระยะราบถึงขอบสะพาน ${fmt(hmin.c.h)} ม.`, hmin.c.h >= 1.8 ? NEW : BAD, polesG);
@@ -775,11 +777,11 @@ table.ph th { color: var(--muted); font-weight: 600; }
       HF.forEach(([x, z], i) => {
         const sx = i ? 1 : -1;                                     // outer side = away from the bridge
         pl.low.forEach(dz => {
-          const y = gy() + pl.hL, zz = z + dz;
+          const y = gy(x, z) + pl.hL, zz = z + dz;
           const de = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.9, 10), mat.poleNew); de.rotation.z = Math.PI / 2; de.position.set(x + sx * 0.75, y, zz); polesG.add(de);
           for (const r of [0.6, -0.6]) { const c = box(0.05, 0.55, 0.05, mat.poleBad, x - sx * 1.15, y, zz, polesG); c.rotation.x = r; }   // red X: cut on the bridge side
         });
-        put(polesG, `DE วงจรล่าง H-Frame ${i ? 'ฝั่งเหนือ' : 'ฝั่งใต้'}`, x, gy() + pl.hL - 1.8, z + Math.max(...pl.low) + 2.5, NEW);
+        put(polesG, `DE วงจรล่าง H-Frame ${i ? 'ฝั่งเหนือ' : 'ฝั่งใต้'}`, x, gy(x, z) + pl.hL - 1.8, z + Math.max(...pl.low) + 2.5, NEW);
       });
       const n = pl.acsr.filter(pl.enc).length;
       put(polesG, `ACSR วงจรบนคงเดิม: ล้ำแนวสะพาน ${n} เฟส`, 20, gy() + pl.hT + 1.5, HF[1][1] - 3, n ? BAD : NEW);
@@ -892,13 +894,15 @@ table.ph th { color: var(--muted); font-weight: 600; }
   function buildGIS() {
     gisG.clear();
     const pm = M(0xd4a017), hv = B(0xd4a017), mv = B(0xb8860b), y0 = gy();
-    for (const [x, z, h, v, top] of GIS_POLES) { cyl(0.18, 0.28, h - 2, pm, x, y0, z, gisG);
+    for (const [x, z, h, v, top] of GIS_POLES) { const y0 = gy(x, z); cyl(0.18, 0.28, h - 2, pm, x, y0, z, gisG);
       put(gisG, `GIS ${v === 'HV' ? '115' : '22'} kV ${h} ม. ${top}`, x, y0 + h + 0.2, z, { size: 1.1, color: '#5c4400', border: '#d4a017' }); }
     for (const [v, , a, b] of GIS_LINES) gisG.add(wire(V(a[0], y0 + (v === '115' ? 18 : 12), a[1]), V(b[0], y0 + (v === '115' ? 18 : 12), b[1]), 0, v === '115' ? hv : mv, 0.06));
   }
   document.getElementById('gisOn').addEventListener('change', e => { gisG.visible = e.target.checked; document.getElementById('gisNote').hidden = !e.target.checked; });
   document.getElementById('hwlOn').addEventListener('change', e => { hwlG.visible = e.target.checked; });
-  document.getElementById('demOn').addEventListener('change', e => { document.getElementById('demBox').hidden = !e.target.checked; rebuild(); });
+  const demBoxUpd = () => { document.getElementById('demBox').hidden = !(document.getElementById('demOn').checked || demPole()); };
+  document.getElementById('demOn').addEventListener('change', () => { demBoxUpd(); rebuild(); });
+  document.getElementById('demPole').addEventListener('change', () => { demBoxUpd(); rebuild(); }); demBoxUpd();
   document.getElementById('demOff').addEventListener('input', rebuild);
   document.getElementById('demNote').innerHTML = 'ค่าสมมติ: DEM เป็นความสูงพื้นผิว (รวมต้นไม้/สิ่งปลูกสร้าง) อ้างอิง EGM2008 ความละเอียด 30 ม. คลาดได้หลายเมตร แบบ ทล. ใช้ระดับอ้างอิงสมมติ (หลังสะพาน 100.000) จึงเลื่อนระดับให้ปลายสะพานสองข้างตรงกับรูปตัดตามยาว ใต้สะพานใช้รูปตัดของ ทล. แทน DEM ระดับ DEM ที่เสา: ' +
     [['115 kV ใต้ ต้นถัดไป', P115[0]], ['115 kV ใต้', P115[1]], ['115 kV เหนือ', P115[2]], ['115 kV เหนือ ต้นถัดไป', P115[3]], ['H-Frame ใต้', HF[0]], ['H-Frame เหนือ', HF[1]]].map(([n, [x, z]]) => `${n} ${demAt(x, z).toFixed(1)}`).join(', ') + ' ม. (EGM2008) © DLR/Airbus, Copernicus';
@@ -932,8 +936,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
     vside: [[0, 3, 150], [0, -1, 0]],
     v22: [[-190, 24, 48], [0, 4, 8]],
     vunder: [[-36, -4, 32], [-50, -4.5, 0]],
-    get vdeS() { const [x, z] = HF[0], y = gy() + num('hLow'); return [[x + 7, y + 1.2, z - 5], [x, y - 0.3, z]]; },   // lower-circuit dead-end, seen from the bridge side
-    get vdeN() { const [x, z] = HF[1], y = gy() + num('hLow'); return [[x - 7, y + 1.2, z - 5], [x, y - 0.3, z]]; },
+    get vdeS() { const [x, z] = HF[0], y = gy(x, z) + num('hLow'); return [[x + 7, y + 1.2, z - 5], [x, y - 0.3, z]]; },   // lower-circuit dead-end, seen from the bridge side
+    get vdeN() { const [x, z] = HF[1], y = gy(x, z) + num('hLow'); return [[x - 7, y + 1.2, z - 5], [x, y - 0.3, z]]; },
     vdet: [[P115[0][0] + 9, 19.5, P115[0][1] + 10], [P115[0][0], 16.5, P115[0][1] + 1.2]],
   };
   let tween = null;
