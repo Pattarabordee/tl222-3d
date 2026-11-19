@@ -101,6 +101,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="m2" data-mode="2">3 แผนงาน 22 kV (H-Frame เดิม)</button>
       <button id="m3" data-mode="3">4 ทางเลือก: ย้ายเสา 115 kV ฝั่งใต้</button>
       <button id="m4" data-mode="4">5 ตัด DE วงจรล่าง H-Frame</button>
+      <button id="m5" data-mode="5">6 จัดเฟส ACSR ใหม่ (เสนอ)</button>
     </div>
     <div class="views" role="group" aria-label="มุมมอง">
       <button id="v3d">มุม 3D</button>
@@ -109,8 +110,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="vside">มองข้ามห้วย</button>
       <button id="v22">มองแนว 22 kV</button>
       <button id="vunder">ใต้สะพาน</button>
-      <button id="vdeS" hidden>DE ฝั่งใต้</button>
-      <button id="vdeN" hidden>DE ฝั่งเหนือ</button>
+      <button id="vdeS" hidden>H-Frame ใต้ (วงจรล่าง)</button>
+      <button id="vdeN" hidden>H-Frame เหนือ (วงจรล่าง)</button>
       <select id="poleSel" aria-label="ซูมไปที่หัวเสา" title="หรือดับเบิลคลิกที่เสาในโมเดล"><option value="">ซูมหัวเสา…</option></select>
       <a href="parts.html">ชุดอุปกรณ์ตามแบบ</a>
     </div>
@@ -118,7 +119,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <h2 id="boqTitle">ปริมาณงาน (BOQ)</h2>
       <p class="lead">นับจากรูปทรงในโมเดลของขั้นที่เลือก รายการวัสดุย่อยคัดจากบัญชีวัสดุในแบบมาตรฐาน กฟภ. ตามเลขแบบ ราคาให้กรอกเอง เก็บไว้ในเบราว์เซอร์นี้เท่านั้น</p>
       <div class="boqbar" role="group" aria-label="ทางเลือก">
-        <button data-bm="2">3 แผนงาน 22 kV</button><button data-bm="3">4 ย้ายเสา 115 kV ฝั่งใต้</button><button data-bm="4">5 ตัด DE วงจรล่าง</button>
+        <button data-bm="2">3 แผนงาน 22 kV</button><button data-bm="3">4 ย้ายเสา 115 kV ฝั่งใต้</button><button data-bm="4">5 ตัด DE วงจรล่าง</button><button data-bm="5">6 จัดเฟส ACSR ใหม่</button>
         <button id="boqCopy">คัดลอกตาราง (วางใน Excel)</button><button id="boqClose">กลับไปโมเดล 3D</button>
       </div>
       <div class="grid-wrap"><table class="boq" id="boqT"></table></div>
@@ -177,6 +178,18 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <p class="assume">ค่าสมมติทั้งหมด: ความสูงตั้งต้นจากแบบ 2221 (คอนบน 13.85 ม.) วงจรล่าง 1.60 ม. ใต้คอนบน ตำแหน่งทางราบวัดจากกึ่งกลาง H-Frame (+ ออกจากถนน) ระยะหย่อนประมาณจากตัวอย่าง ACSR 185 ในคู่มือข้ามแม่น้ำหรือถนน ต้องวัดจริงในการสำรวจร่วม</p>
       </div>
       <p class="note">เกณฑ์: สายเปลือยเหนือพื้นสะพาน/ผิวทาง 6.10 ม. และ 7.50 ม. ระยะทางราบถึงขอบสะพาน 1.80 ม. (ตารางระยะห่างทางไฟฟ้า SA2-015/45017)</p>
+    </section>
+
+    <section id="secArr">
+      <h2>จัดเฟส ACSR ใหม่ (ขั้นที่ 6)</h2>
+      <p class="note" style="border:0;padding:0;margin:0 0 8px">ระบบลองทุกแบบของการวาง ACSR 3 เฟสลงตำแหน่งลูกถ้วยวงจรบนและวงจรล่าง (SAC เดิม) ที่กรอกไว้ด้านบน แต่ละปลายเลือกตำแหน่งต่างกันได้ แล้วเลือกแบบที่มีเฟสพ้นแนวสะพานมากที่สุด (ไม่อยู่เหนือพื้นสะพานและห่างขอบ ≥ 1.80 ม.) รองลงมาคือช่วงที่อยู่เหนือพื้นสั้นที่สุด และระยะห่างระหว่างเฟสมากที่สุด</p>
+      <div class="calc">
+        <label for="x3On">เพิ่มตำแหน่งลูกถ้วยที่ H-Frame ฝั่งเหนือ</label><input id="x3On" type="checkbox" style="width:auto;justify-self:end">
+        <label for="x3dz">ตำแหน่งทางราบตำแหน่งเพิ่ม (ม.)</label><input id="x3dz" type="number" step="0.1" value="3.5">
+        <label for="x3h">ความสูงตำแหน่งเพิ่มเหนือดิน (ม.)</label><input id="x3h" type="number" step="0.05" value="10.65">
+        <label for="sepMin">ระยะห่างระหว่างเฟสขั้นต่ำ (ม.)</label><input id="sepMin" type="number" step="0.1" value="1.6">
+        <p class="assume">ค่าสมมติ: ตำแหน่งเพิ่มตั้งต้นที่ +3.5 ม. ต่ำกว่าวงจรล่าง 1.60 ม. (คอนชั้นที่ 3 ยื่นออกนอกถนน ต้องออกแบบ) ถ้าใช้ +2.9 ม. ต้องต่ำลงเป็นประมาณ 9.85 ม. เฟสจึงห่างกันพอ ระยะห่างระหว่างเฟสขั้นต่ำใช้ระยะระหว่างวงจรเดิม 1.60 ม. ไว้ก่อน ยังไม่พบเกณฑ์ในเอกสาร</p>
+      </div>
     </section>
 
     <section id="secMove">
@@ -564,6 +577,36 @@ table.ph th { color: var(--muted); font-weight: 600; }
     return { acsr, sac, moved, enc, hT, hL, low };
   }
   const vOk = v => ({ a: v >= 6.10, b: v >= 7.50 });
+  // ---------- step 6: rearrange the 3 ACSR phases over the free top + lower (ex-SAC) insulator slots, each end chosen independently ----------
+  function arrange22() {
+    const hT = num('hTop'), hL = num('hLow'), s = num('sag22'), sepMin = num('sepMin');
+    const base = [...list('dzTop').map(d => ({ h: hT, dz: d, n: 'บน' })), ...list('dzLow').map(d => ({ h: hL, dz: d, n: 'ล่าง' }))];
+    const slS = base, slN = base.slice(), x3 = document.getElementById('x3On').checked;
+    if (x3) slN.push({ h: num('x3h'), dz: num('x3dz'), n: 'เพิ่ม', extra: true });
+    const end = (i, sl) => V(HF[i][0], gy() + sl.h, HF[i][1] + sl.dz), K = 60;
+    const Q = slS.map(a => slN.map(b => { const A = end(0, a), Bp = end(1, b), pts = []; let over = 0, h = Infinity;
+      for (let k = 0; k <= K; k++) { const p = spanPt(A, Bp, s, k / K); pts.push(p); if (onSlab(p.x) && inDeck(p.z)) over++; if (onBridge(p.x)) h = Math.min(h, deckGap(p.z)); }
+      return { A, B: Bp, pts, over, h, clear: over === 0 && h >= 1.8 }; }));
+    const perms = n => { const r = []; for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) for (let c = 0; c < n; c++) if (a !== b && b !== c && a !== c) r.push([a, b, c]); return r; };
+    const pS = perms(slS.length), pN = perms(slN.length);
+    let best = null;
+    for (const u of pS) for (const w of pN) {
+      if (u[0] > u[1] || u[1] > u[2]) continue;                     // phase order does not matter: keep S slots sorted
+      const L = [0, 1, 2].map(k => Q[u[k]][w[k]]);
+      let sep = Infinity; for (const [i, j] of [[0, 1], [0, 2], [1, 2]]) for (let k = 0; k <= K; k++) sep = Math.min(sep, L[i].pts[k].distanceTo(L[j].pts[k]));
+      const sc = [L.filter(l => l.clear).length, sep >= sepMin - 1e-9 ? 1 : 0, -L.reduce((t, l) => t + l.over, 0), Math.min(sep, 3), Math.min(...L.map(l => l.h))];
+      const better = () => { for (let i = 0; i < sc.length; i++) if (Math.abs(sc[i] - best.sc[i]) > 1e-6) return sc[i] > best.sc[i]; return false; };
+      if (!best || better()) best = { sc, u, w, sep };
+    }
+    const ph = [0, 1, 2].map(k => { const a = slS[best.u[k]], b = slN[best.w[k]], q = Q[best.u[k]][best.w[k]];
+      return { kind: 'ACSR', i: k, dz: a.dz, h: a.h, a: q.A, b: q.B, sag: s, c: clearance(q.A, q.B, s), sS: a, sN: b,
+        lab: `เฟส ${'ABC'[k]}: ใต้ ${a.n} ${fmt(a.dz)} → เหนือ ${b.n} ${fmt(b.dz)}`, hTxt: b.h === a.h ? f2(a.h) : `${f2(a.h)}/${f2(b.h)}`,
+        moved: !(a.n === 'บน' && b.n === 'บน' && a.dz === b.dz) }; });
+    // where the N end would have to be for each S slot to clear the bridge edge by 1.80 m (straight line in plan)
+    const need = slS.filter((a, i, arr) => arr.findIndex(b => b.dz === a.dz) === i).map(a => { const zS = HF[0][1] + a.dz, t = (DOH.abut[1] - HF[0][0]) / (HF[1][0] - HF[0][0]);
+      return { dz: a.dz, dzN: zS + (DOH.rt[1] + 1.8 - zS) / t - HF[1][1] }; });
+    return { ph, sep: best.sep, sepMin, clear: best.sc[0], x3, need, slN };
+  }
 
   // ---------- build the poles and lines for the current mode ----------
   const polesG = new THREE.Group(); scene.add(polesG);
@@ -633,6 +676,16 @@ table.ph th { color: var(--muted); font-weight: 600; }
         const n = pl.acsr.filter(pl.enc).length;
         put(polesG, `22 kV ช่วง ${fmt(L22)} ม.: ACSR ล้ำแนวสะพาน ${n} เฟส`, 20, gy() + pl.hT + 1.5, HF[1][1] - 3, n ? BAD : NEW);
       }
+    } else if (mode === 5) {
+      const ar = arrange22(); S.ar = ar;
+      pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.ghost, 0.06)));
+      ar.ph.forEach(p => { polesG.add(wire(p.a, p.b, p.sag, lineMat.neu, 0.045)); encDraw(p, polesG);
+        const m = spanPt(p.a, p.b, p.sag, 0.5); put(polesG, `เฟส ${'ABC'[p.i]}`, m.x, m.y + 0.8, m.z + 0.8, { size: 1.0, color: '#0f5a31', border: '#1f9a55' }); });
+      if (ar.x3) { const [x, z] = HF[1], d = num('x3dz'); boxXY(x - 0.1, x + 0.1, gy() + num('x3h') - 0.08, gy() + num('x3h') + 0.08, Math.min(-1.7, d - 0.3), Math.max(1.7, d + 0.3), mat.poleNew, polesG);
+        put(polesG, 'ตำแหน่งลูกถ้วยเพิ่ม (ค่าสมมติ)', x, gy() + num('x3h') - 1.4, z + d + 2, NEW); }
+      put(polesG, `จัดเฟส ACSR ใหม่: พ้นแนวสะพาน ${ar.clear} จาก 3 เฟส`, 20, gy() + pl.hT + 1.5, HF[1][1] - 3, ar.clear === 3 ? NEW : BAD);
+      const hmin = ar.ph.filter(p => !p.c.over).sort((p, q) => p.c.h - q.c.h)[0];
+      if (hmin && hmin.c.pH) hdim(hmin.c.pH.x, DOH.rt[1], hmin.c.pH.z, 1.5, `ระยะราบถึงขอบสะพาน ${fmt(hmin.c.h)} ม.`, hmin.c.h >= 1.8 ? NEW : BAD, polesG);
     } else if (mode === 4) {
       // lower circuit (120 SAC) cut at both H-Frames: crossing span removed, each side dead-ended on the outer side; top ACSR unchanged
       pl.acsr.forEach(p => { polesG.add(wire(p.a, p.b, p.sag, lineMat.acsr, 0.035)); encDraw(p, polesG); });
@@ -676,7 +729,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   function phaseTable(arr) {
     return '<table class="ph"><tr><th>เฟส</th><th>สูงจุดยึด</th><th>ราบถึงขอบสะพาน</th><th>ดิ่งเหนือ deck</th><th>6.10</th><th>7.50</th></tr>' +
       arr.map(p => { const v = p.c.over ? p.c.vDeck : p.c.vRoad, k = vOk(v);
-        return `<tr><td>${p.kind} ${p.i + 1} (${fmt(p.dz)})${p.moved ? ' ย้าย' : ''}</td><td>${f2(p.h)}</td><td>${p.c.over ? '<span class="st-warn">เหนือพื้น</span>' : f2(p.c.h) + ' ' + ok(p.c.h >= 1.8, '✓', '✗')}</td>` +
+        return `<tr><td>${p.lab || `${p.kind} ${p.i + 1} (${fmt(p.dz)})${p.moved ? ' ย้าย' : ''}`}</td><td>${p.hTxt || f2(p.h)}</td><td>${p.c.over ? '<span class="st-warn">เหนือพื้น</span>' : f2(p.c.h) + ' ' + ok(p.c.h >= 1.8, '✓', '✗')}</td>` +
           `<td>${p.c.over ? f2(p.c.vDeck) : isFinite(p.c.vRoad) ? '(ถนน) ' + f2(p.c.vRoad) : '-'}</td><td>${isFinite(v) ? ok(k.a, '✓', '✗') : '-'}</td><td>${isFinite(v) ? ok(k.b, '✓', '✗') : '-'}</td></tr>` +
           `<tr><td colspan="6" style="text-align:left;font-size:12px;color:${p.c.enc.some(e => e.k !== 'road') ? 'var(--bad)' : 'var(--muted)'}">ช่วงล้ำ: ${encTxt(p.c)}</td></tr>`; }).join('') + '</table>' +
       '<div style="color:var(--muted);font-size:12px">along วัดจากกึ่งกลางสะพาน (+ เหนือ) สะพาน −70.0 ถึง +70.3 แผ่นพื้นทางเข้าถึง −80.1/+80.5 ระยะทางราบไม่รวมสายแกว่งเพราะลม</div>';
@@ -708,10 +761,19 @@ table.ph th { color: var(--muted); font-weight: 600; }
         `<div>ระยะดิ่งเหนือพื้นสะพาน/ผิวทาง เกณฑ์ 7.50 ม. ${ok(okV)}</div>` +
         `<div style="color:var(--warn)">ยังต้องตรวจ: อุปกรณ์จับปลายสาย/แคล้มป์ตำแหน่ง SAC เดิมใช้กับ ACSR ได้หรือไม่ แรงดึงและระยะหย่อนจริงช่วง ${fmt(L22)} ม. ระยะห่างระหว่างเฟสเมื่อย้ายลง</div>` +
         `<div style="color:var(--muted);font-size:13px">ถ้าลูกถ้วยวงจรล่างอยู่ตำแหน่งทางราบเดียวกับวงจรบน การย้ายลงไม่ได้เพิ่มระยะทางราบ ให้กรอกตำแหน่งจริงจากการสำรวจ</div>`;
+    } else if (P.mode === 5) {
+      const ar = S.ar, bad = ar.ph.filter(p => !(!p.c.over && p.c.h >= 1.8));
+      el.innerHTML = `<div class="big ${ar.clear === 3 && ar.sep >= ar.sepMin ? 'st-ok' : 'st-warn'}">จัดเฟส ACSR ใหม่: พ้นแนวสะพาน ${ar.clear} จาก 3 เฟส</div>` +
+        `<div>เอาวงจรล่าง 120 SAC ออก แล้ววาง ACSR ลงตำแหน่งลูกถ้วยวงจรบน/ล่างที่ดีที่สุดจากการลองทุกแบบ${ar.x3 ? ' รวมตำแหน่งเพิ่มที่ H-Frame ฝั่งเหนือ (ค่าสมมติ)' : ''} แต่ละปลายใช้ตำแหน่งต่างกันได้ ต้องต่อแจมเปอร์จากสายด้านนอกเข้าตำแหน่งใหม่และเรียงเฟสให้ตรง</div>` + phaseTable(ar.ph) +
+        `<div>จุดต่ำสุดของสายในช่วงสะพาน (along −70.0 ถึง +70.3) สูงกว่าระดับพื้นสะพาน 100.000: ${ar.ph.map(p => { let y = Infinity; for (let k = 0; k <= 400; k++) { const q = spanPt(p.a, p.b, p.sag, k / 400); if (onBridge(q.x)) y = Math.min(y, q.y); } return `${'ABC'[p.i]} ${f2(y)} ม.`; }).join(', ')}</div>` +
+        `<div>ระยะห่างระหว่างเฟสต่ำสุดตลอดช่วง ${f2(ar.sep)} ม. เกณฑ์ ${f2(ar.sepMin)} ม. (ค่าสมมติ) ${ok(ar.sep >= ar.sepMin - 1e-9)}</div>` +
+        (bad.length ? `<div class="st-bad">ยังล้ำ ${bad.length} เฟส: ${bad.map(p => p.lab.split(':')[0]).join(', ')}</div>` +
+          `<div>ปลายฝั่งเหนือต้องอยู่ห่างกึ่งกลาง H-Frame ออกนอกถนนอย่างน้อย: ${ar.need.map(n => `ถ้าปลายใต้ ${fmt(n.dz)} → ${f2(n.dzN)} ม.`).join(', ')} (เส้นตรงในแปลน ไม่รวมสายแกว่ง) ${ar.x3 ? '' : 'ลองติ๊ก "เพิ่มตำแหน่งลูกถ้วยที่ H-Frame ฝั่งเหนือ"'}</div>` : '') +
+        `<div style="color:var(--warn)">ต้องตรวจ: ตำแหน่งและความสูงลูกถ้วยจริง (ค่าสมมติ), แรงดึงและการจัดเฟสบนคอนเมื่อสายมาจากคนละตำแหน่ง, ระยะห่างเฟสในแนวดิ่งสำหรับช่วง ${fmt(L22)} ม. (สายแกว่ง/กระพือ), การยึดโยงรับแรงไม่สมดุล, ระยะสายแกว่งเพราะลม</div>`;
     } else if (P.mode === 4) {
       const n = pl.acsr.filter(pl.enc).length;
       el.innerHTML = `<div class="big ${n ? 'st-warn' : 'st-ok'}">ตัด DE วงจรล่างที่ H-Frame ทั้งสองฝั่ง</div>` +
-        `<div>รื้อช่วงข้ามวงจรล่าง 120 SAC ${fmt(L22)} ม. วงจรล่างแต่ละฝั่งจบที่ชุดเข้าปลายสาย (DE) ด้านนอกของ H-Frame (สีเขียว) จุดตัดด้านสะพานแสดงสีแดง ใช้ปุ่ม "DE ฝั่งใต้" / "DE ฝั่งเหนือ" ด้านล่างเพื่อซูมดู</div>` +
+        `<div>รื้อช่วงข้ามวงจรล่าง 120 SAC ${fmt(L22)} ม. วงจรล่างแต่ละฝั่งจบที่ชุดเข้าปลายสาย (DE) ด้านนอกของ H-Frame (สีเขียว) จุดตัดด้านสะพานแสดงสีแดง ใช้ปุ่ม "H-Frame ใต้/เหนือ (วงจรล่าง)" ด้านล่างเพื่อซูมดู</div>` +
         `<div>เหนือสะพานเหลือเฉพาะวงจรบน ACSR ${n ? `<span class="st-bad">ยังล้ำแนวสะพาน ${n} เฟส</span>` : '<span class="st-ok">ไม่ล้ำ</span>'}</div>` + phaseTable(pl.acsr) +
         `<div style="color:var(--warn)">ต้องตรวจ: วงจรล่างสองฝั่งสะพานจะไม่ต่อถึงกัน ต้องยืนยันการจ่ายไฟ/โหลดของวงจรนี้แต่ละฝั่ง, H-Frame รับแรงดึงวงจรล่างด้านเดียว (กำลังโครงสร้างและสายยึดโยง), ชุด DE ของ 2221 เดิมใช้ต่อได้หรือไม่ ความสูงและตำแหน่งวงจรล่างเป็นค่าสมมติ</div>`;
     } else {
@@ -750,7 +812,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
     buildTerrain(); buildOld(); buildNew(); buildROW(); buildPoles(); buildGIS(); fillPoleSel();
     oldG.visible = P.mode === 0; newG.visible = P.mode >= 1;
     document.getElementById('secMove').style.display = P.mode === 3 ? '' : 'none';
-    for (const id of ['vdeS', 'vdeN']) document.getElementById(id).hidden = P.mode !== 4;
+    document.getElementById('secArr').style.display = P.mode === 5 ? '' : 'none';
+    for (const id of ['vdeS', 'vdeN']) document.getElementById(id).hidden = P.mode !== 4 && P.mode !== 5;
     status();
     if (!document.getElementById('boqv').hidden) renderBoq();
     document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.mode === P.mode)));
@@ -763,7 +826,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   bind('row', 'ROW'); bind('low', 'low');
   document.getElementById('g0').addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { P.g0 = v; rebuild(); } });
   document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => { P.mode = +b.dataset.mode; rebuild(); }));
-  for (const id of ['cw', 'ca', 'ce', 'cal', 'ch', 'tA', 'cd', 'cu', 'tmin', 'tavg', 'qc', 'v115', 'hTop', 'hLow', 'dzTop', 'dzLow', 'sag22', 'sagSac', 'mvA', 'mvO'])
+  for (const id of ['cw', 'ca', 'ce', 'cal', 'ch', 'tA', 'cd', 'cu', 'tmin', 'tavg', 'qc', 'v115', 'hTop', 'hLow', 'dzTop', 'dzLow', 'sag22', 'sagSac', 'mvA', 'mvO', 'x3On', 'x3dz', 'x3h', 'sepMin'])
     document.getElementById(id).addEventListener('input', rebuild);
 
   const views = {
@@ -813,7 +876,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       ['แหวนสี่เหลี่ยมแบน 62×62×6', 6, 'ตัว', '01180101'], ['แหวนสปริง M16', 3, 'ตัว', '01180301'], ['ชุดลูกถ้วยแขวน (D-17C)', 3, 'ชุด', 'D-17C'],
       ['ชุดสายล่อฟ้า (D-51)', 1, 'ชุด', 'D-51'], ['ฐานรากเสา (D-10A)', 1, 'ชุด', 'D-10A'], ['การต่อลงดิน (D-25)', 1, 'ชุด', 'D-25']],
   };
-  const MODE_N = { 2: '3 แผนงาน 22 kV (H-Frame เดิม)', 3: '4 ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)', 4: '5 ตัด DE วงจรล่างที่ H-Frame ทั้งสองฝั่ง' };
+  const MODE_N = { 2: '3 แผนงาน 22 kV (H-Frame เดิม)', 3: '4 ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)', 4: '5 ตัด DE วงจรล่างที่ H-Frame ทั้งสองฝั่ง', 5: '6 จัดเฟส ACSR ใหม่ (เสนอ)' };
   function boqRows() {
     const R = [], m = v => Math.ceil(v), sec = t => R.push({ sec: t }), it = (d, ref, q, u, key = d) => R.push({ d, ref, q, u, key });
     const asm = (d, ref, n) => { R.push({ d: `${d} ×${n} ชุด`, ref: 'แบบ ' + ref, asm: true });
@@ -826,6 +889,15 @@ table.ph th { color: var(--muted); font-weight: 600; }
       it('ย้ายสาย ACSR ลงลูกถ้วยวงจรล่าง (ปลายละ 1 จุดต่อเฟส)', '—', 2 * n, 'จุด', 'mvacsr');
       it('สเตรนแคลมป์ Al/ACSR (เฉพาะถ้าของเดิมใช้กับ ACSR ไม่ได้)', '03110000', 2 * n, 'ชุด', 'clamp');
       it('ปรับระยะหย่อนสาย ACSR ช่วงข้าม', '—', n, 'เฟส', 'resag');
+    } else if (P.mode === 5) {
+      const ar = S.ar, n = ar.ph.filter(p => p.moved).length;
+      sec('งานรื้อถอน');
+      it('รื้อช่วงข้ามวงจรล่าง 120 SAC (ความยาวช่วง × 3 เฟส)', 'ผู้ใช้แจ้ง', m(L22 * 3), 'ม.', 'rm:sac');
+      sec('งานติดตั้ง');
+      it('ย้ายสาย ACSR ช่วงข้ามไปตำแหน่งลูกถ้วยใหม่', '—', n, 'เฟส', 'arr:mv');
+      it('สายแจมเปอร์ต่อสายด้านนอกเข้าตำแหน่งใหม่ (2 ฝั่ง × 3 เฟส)', '—', 6, 'จุด', 'arr:jmp');
+      it('สเตรนแคลมป์ Al/ACSR (เฉพาะถ้าของเดิมใช้กับ ACSR ไม่ได้)', '03110000', 2 * n, 'ชุด', 'clamp');
+      if (ar.x3) it('คอน/แขนยื่นเพิ่มที่ H-Frame ฝั่งเหนือ พร้อมลูกถ้วย (ออกแบบเฉพาะ)', '—', 1, 'ชุด', 'arr:x3');
     } else if (P.mode === 4) {
       sec('งานรื้อถอน');
       it('รื้อช่วงข้ามวงจรล่าง 120 SAC (ความยาวช่วง × 3 เฟส)', 'ผู้ใช้แจ้ง', m(L22 * 3), 'ม.', 'rm:sac');
@@ -882,7 +954,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   };
 
   // URL hash picks a starting step/view (used for printable stills): #s0-v3d etc.; #boq opens the BOQ
-  const h = (location.hash || '').match(/^#s([0-4])-(v3d|vtop|vroad|vside|v22|vunder|vdet|vdeS|vdeN)$/);
+  const h = (location.hash || '').match(/^#s([0-5])-(v3d|vtop|vroad|vside|v22|vunder|vdet|vdeS|vdeN)$/);
   if (h) P.mode = +h[1];
   rebuild(); go(h ? h[2] : 'v3d', true);
   if ((location.hash || '') === '#boq') { P.mode = 2; rebuild(); document.getElementById('boqv').hidden = false; renderBoq(); }
