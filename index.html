@@ -108,6 +108,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="v3d">มุม 3D</button>
       <button id="vtop">มุมบน</button>
       <button id="vsat">ดาวเทียม</button>
+      <button id="lblOn" aria-pressed="true" title="เปิด/ปิดป้ายชื่อในโมเดล">ป้ายชื่อ</button>
       <button id="vroad">มองตามถนน</button>
       <button id="vside">มองข้ามห้วย</button>
       <button id="v22">มองแนว 22 kV</button>
@@ -1140,12 +1141,14 @@ table.ph th { color: var(--muted); font-weight: 600; }
     renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(r.height, 1); camera.updateProjectionMatrix();
   }
   new ResizeObserver(resize).observe(canvas.parentElement); resize();
+  let SHOW_LBL = true;
+  document.getElementById('lblOn').addEventListener('click', e => { SHOW_LBL = !SHOW_LBL; e.currentTarget.setAttribute('aria-pressed', String(SHOW_LBL)); });
   const _v = new THREE.Vector3();
   (function loop() {
     if (tween) { tween.k = Math.min(1, tween.k + 0.045); const e = 1 - Math.pow(1 - tween.k, 3);
       camera.position.lerpVectors(tween.from, tween.to, e); controls.target.lerpVectors(tween.tf, tween.tt, e); if (tween.k >= 1) tween = null; }
     controls.update();
-    scene.traverse(o => { if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = d > 17; } });
+    scene.traverse(o => { if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = SHOW_LBL && d > 17; } });
     renderer.render(scene, camera); requestAnimationFrame(loop);
   })();
   window.__ready = true; window.__S = () => S;
