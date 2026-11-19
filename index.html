@@ -166,8 +166,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <label for="demPole">ใช้ระดับโคนเสาจาก DEM</label><input id="demPole" type="checkbox" checked style="width:auto;justify-self:end">
         <label for="g0">ระดับดินที่โคนเสา (ม.) ถ้าไม่ใช้ DEM</label><input id="g0" type="number" step="0.1" value="99.0">
         <p class="assume">ค่าสมมติ: ค่าตั้งต้นใช้ระดับโคนเสาแต่ละต้นจาก Copernicus DEM (เลื่อนระดับตามค่าปรับในส่วนสัญลักษณ์) ซึ่งคลาดได้หลายเมตร ถ้าไม่ใช้ DEM จะใช้ค่าเดียวนี้ทุกต้น (แบบมีระดับดินเฉพาะใต้สะพาน ปลายสะพาน 98.91 / 99.02)</p>
-        <label for="v115">เกณฑ์ระยะดิ่ง 115 kV เหนือผิวทาง (ม.)</label><input id="v115" type="number" step="0.1" value="8.5">
-        <p class="assume">ค่าสมมติ: ยังไม่พบเกณฑ์ในเอกสาร กฟภ. ที่มี</p>
+        <label for="v115">เกณฑ์ระยะดิ่ง 115 kV เหนือผิวทาง (ม.)</label><input id="v115" type="number" step="0.1" value="7.5">
+        <p class="assume">ตามคำแนะนำแบบมาตรฐานการก่อสร้างสายส่ง 115 kV ตาราง 6-2 (แบบ SA2-015/45017): เหนือถนน 7.50 ม. ข้ามทางหลวง 9.00 ม. ระยะทางราบถึงสะพานที่มียานพาหนะ 2.30 ม. (ตาราง 6-1) วัดที่ระยะหย่อนสุดท้ายสูงสุด</p>
       </div>
     </section>
 
@@ -182,7 +182,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <label for="sagSac">ระยะหย่อน SAC กลางช่วง (ม.)</label><input id="sagSac" type="number" step="0.1" value="2.9">
         <p class="assume">ค่าสมมติทั้งหมด: ความสูงตั้งต้นจากแบบ 2221 (คอนบน 13.85 ม.) วงจรล่าง 1.60 ม. ใต้คอนบน ตำแหน่งทางราบวัดจากกึ่งกลาง H-Frame (+ ออกจากถนน) ระยะหย่อนประมาณจากตัวอย่าง ACSR 185 ในคู่มือข้ามแม่น้ำหรือถนน ต้องวัดจริงในการสำรวจร่วม</p>
       </div>
-      <p class="note">เกณฑ์: สายเปลือยเหนือพื้นสะพาน/ผิวทาง 6.10 ม. และ 7.50 ม. ระยะทางราบถึงขอบสะพาน 1.80 ม. (ตารางระยะห่างทางไฟฟ้า SA2-015/45017)</p>
+      <p class="note">เกณฑ์ 22 kV (คู่มือการก่อสร้างระบบจำหน่ายแรงสูงเคเบิลอากาศ 22/33 kV ตาราง 8.1, 8.2, 8.8 แบบ SA2-015/45017): ระยะดิ่งเหนือผิวทาง สายเปลือย 6.10 ม. (7.50 ม.) SAC 6.10 TAC 5.10 · ระยะราบถึงสะพานที่มียานพาหนะ สายเปลือย 1.80 PIC 1.50 SAC 0.90 TAC 0.60 ม. · ใต้สะพาน: สายเปลือยห้าม SAC 2.00 TAC 0.15 ม. · สายถึงคอน 0.14 ถึงผิวเสา 0.20 ม. (ตาราง 8.12)</p>
     </section>
 
     <section id="secShift">
@@ -214,8 +214,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <label for="x3On">เพิ่มตำแหน่งลูกถ้วยที่ H-Frame ฝั่งเหนือ</label><input id="x3On" type="checkbox" style="width:auto;justify-self:end">
         <label for="x3dz">ตำแหน่งทางราบตำแหน่งเพิ่ม (ม.)</label><input id="x3dz" type="number" step="0.1" value="3.5">
         <label for="x3h">ความสูงตำแหน่งเพิ่มเหนือดิน (ม.)</label><input id="x3h" type="number" step="0.05" value="10.65">
-        <label for="sepMin">ระยะห่างระหว่างเฟสขั้นต่ำ (ม.)</label><input id="sepMin" type="number" step="0.1" value="1.6">
-        <p class="assume">ค่าสมมติ: ตำแหน่งเพิ่มตั้งต้นที่ +3.5 ม. ต่ำกว่าวงจรล่าง 1.60 ม. (คอนชั้นที่ 3 ยื่นออกนอกถนน ต้องออกแบบ) ถ้าใช้ +2.9 ม. ต้องต่ำลงเป็นประมาณ 9.85 ม. เฟสจึงห่างกันพอ ระยะห่างระหว่างเฟสขั้นต่ำใช้ระยะระหว่างวงจรเดิม 1.60 ม. ไว้ก่อน ยังไม่พบเกณฑ์ในเอกสาร</p>
+        <label for="sepMin">ระยะห่างระหว่างเฟสขั้นต่ำ (ม.)</label><input id="sepMin" type="number" step="0.1" value="1.4">
+        <p class="assume">ระยะห่างเฟสขั้นต่ำ 1.40 ม. = ระยะดิ่งระหว่างวงจร 22 kV บนเสาเดียวกัน ตามคู่มือ 22/33 kV ตาราง 8.11 (คำแนะนำ 115 kV ตาราง 6-4 ใช้ 1.30 ม.) ระยะห่างเฟสทางราบขั้นต่ำ 0.453 ม. (ตาราง 8.13) ตำแหน่งลูกถ้วยเพิ่ม +3.5 ม. สูง 10.65 ม. เป็นค่าสมมติ (คอนชั้นที่ 3 ต้องออกแบบตามแบบมาตรฐาน) ตรวจระยะสายถึงผิวเสา 0.20 ม. ด้วย</p>
       </div>
     </section>
 
@@ -905,14 +905,15 @@ table.ph th { color: var(--muted); font-weight: 600; }
     chk('เสา 22 kV', P22[0], -P22[1], 0.2);
     const enc = S.pl.acsr.filter(S.pl.enc).length, c115 = S.span115[1].c;
     if (enc) bad.push(`สาย ACSR 22 kV ยังล้ำแนวสะพาน ${enc} เฟส (เหนือพื้นสะพาน หรือห่างขอบ < 1.80 ม.)`);
-    if (c115.over) warn.push(`สาย 115 kV ยังพาดเหนือพื้นสะพาน LT. (ระยะดิ่ง ${fmt(c115.vDeck)} ม.)`);
+    if (c115.over) warn.push(`สาย 115 kV ยังพาดเหนือพื้นสะพาน LT. (ระยะดิ่ง ${fmt(c115.vDeck)} ม. เกณฑ์ ${fmt(num('v115'))} ม.)`);
+    else if (c115.h < 2.30) bad.push(`สาย 115 kV ห่างขอบสะพาน ${f2(c115.h)} ม. น้อยกว่า 2.30 ม. (คำแนะนำ 115 kV ตาราง 6-1)`);
     let need22 = NaN; for (let t = -5; t <= 30; t += 0.25) { if (phasesAt(t).every(c => !c.over && c.h >= 1.8)) { need22 = t; break; } }
     const max22 = Math.min(...[DOH.hfS, DOH.hfN].flat().map(([, o]) => half - Math.abs(o) - 0.24)), max115 = Math.min(...DOH.p115.map(([, o]) => half - o - 0.35));
     const arm = PARTS ? Math.max(...['hv0', 'hv1', 'hv2'].flatMap(k => PARTS.SDTG3.pts[k].map(p => p.z))) : 2.4;   // 115 kV conductors sit this far from the pole towards the road
-    const need115 = Math.max(...DOH.p115.slice(1, 3).map(([, o]) => -DOH.lt[0] + arm - o));
+    const need115 = Math.max(...DOH.p115.slice(1, 3).map(([, o]) => -DOH.lt[0] + 2.30 + arm - o));   // conductors at least 2.30 m beyond the LT deck edge
     return `<div style="margin-top:8px;font-weight:600">ขยับแนวเสา: 115 kV ${fmt(SH.s115)} ม. · 22 kV ${fmt(SH.s22)} ม. (บวก = ออกจากถนน)</div>` +
       '<table class="ph"><tr><th>เสา</th><th>offset</th><th>ห่างขอบทาง</th><th>ระดับดิน</th><th>ผล</th></tr>' + rows.join('') + '</table>' +
-      `<div>ระยะขยับที่ต้องการ: 22 kV อย่างน้อย <b>${isNaN(need22) ? 'มากกว่า 30' : fmt(need22)} ม.</b> สาย ACSR ทุกเฟสจึงพ้นแนวสะพาน · 115 kV อย่างน้อย <b>${fmt(need115)} ม.</b> สายจึงพ้นพื้นสะพาน LT. ในแปลน</div>` +
+      `<div>ระยะขยับที่ต้องการ: 22 kV อย่างน้อย <b>${isNaN(need22) ? 'มากกว่า 30' : fmt(need22)} ม.</b> สาย ACSR ทุกเฟสห่างขอบสะพาน 1.80 ม. ขึ้นไป · 115 kV อย่างน้อย <b>${fmt(need115)} ม.</b> สายจึงห่างขอบสะพาน LT. 2.30 ม. ขึ้นไป</div>` +
       `<div>R.O.W. ${fmt(P.ROW)} ม. (ค่าสมมติ) ให้ขยับได้ไม่เกิน 22 kV ${fmt(max22)} ม. · 115 kV ${fmt(max115)} ม.</div>` +
       (bad.length ? `<div class="st-bad">ทำไม่ได้เพราะ: ${bad.join('; ')}</div>` : '<div class="st-ok">ไม่พบปัจจัยที่ทำให้ขยับไม่ได้ในโมเดล</div>') +
       (warn.length ? `<div class="st-warn">ต้องระวัง: ${warn.join('; ')}</div>` : '') +
@@ -952,7 +953,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
         (S1in ? `<div><b class="st-bad">1.</b> เสา 115 kV ฝั่งใต้ (along ${fmt(P115[1][0])}, offset ${fmt(-P115[1][1])}) อยู่ในแผ่นพื้นทางเข้า LT. (along ${fmt(DOH.slab[0])} ถึง ${fmt(DOH.abut[0])}, offset +1.5 ถึง +14.5) <span class="st-bad">ต้องย้าย</span></div>`
           : `<div><b class="st-ok">1.</b> เสา 115 kV ฝั่งใต้ (offset ${fmt(-P115[1][1])}) พ้นแผ่นพื้นทางเข้าแล้ว ขอบเสาห่างขอบแผ่นพื้น ${fmt(-P115[1][1] - 0.35 - 14.5)} ม.</div>`) +
         `<div><b class="st-warn">2.</b> เสา 115 kV ฝั่งเหนือ (along ${fmt(P115[2][0])}) อยู่เลยแผ่นพื้นทางเข้า ${fmt(P115[2][0] - DOH.slab[1])} ม. ศูนย์กลางเสาห่างขอบถนนที่เรียวลง ${fmt(dN)} ม. ${lowTxt(dN - 0.35)} ใกล้ลาดคันทาง</div>` +
-        `<div><b class="st-warn">3.</b> 115 kV ช่วงข้าม ${fmt(cross.L)} ม. พาดเหนือ deck LT. ตลอดความยาว (สายห่างแกน offset ประมาณ ${fmt(-(c.pDeck ? c.pDeck.z : NaN))} ม.) หย่อน ${fmt(cross.s)} ม. ที่ ${num('tA')} °C ต่ำสุดเหนือ deck ${fmt(c.vDeck)} ม. เกณฑ์ ${fmt(v115)} ม. (ค่าสมมติ) ${ok(c.vDeck >= v115)} 22 kV ใต้ 115 kV เหนือ deck ${fmt(cross.c22.vDeck)} ม. 6.10 ${ok(vOk(cross.c22.vDeck).a)} 7.50 ${ok(vOk(cross.c22.vDeck).b)}</div>` +
+        `<div><b class="st-warn">3.</b> 115 kV ช่วงข้าม ${fmt(cross.L)} ม. พาดเหนือ deck LT. ตลอดความยาว (สายห่างแกน offset ประมาณ ${fmt(-(c.pDeck ? c.pDeck.z : NaN))} ม.) หย่อน ${fmt(cross.s)} ม. ที่ ${num('tA')} °C ต่ำสุดเหนือ deck ${fmt(c.vDeck)} ม. เกณฑ์ ${fmt(v115)} ม. (115 kV ตาราง 6-2) ${ok(c.vDeck >= v115)} 22 kV ใต้ 115 kV เหนือ deck ${fmt(cross.c22.vDeck)} ม. 6.10 ${ok(vOk(cross.c22.vDeck).a)} 7.50 ${ok(vOk(cross.c22.vDeck).b)}</div>` +
         `<div><b class="${n22 ? 'st-bad' : 'st-ok'}">4.</b> 22 kV H-Frame ช่วง ${fmt(L22)} ม. ACSR ล้ำแนวสะพาน RT. ${n22} เฟส (อยู่เหนือพื้นสะพาน หรือห่างขอบ &lt; 1.80 ม.)</div>` + phaseTable([...pl.acsr, ...pl.sac]) +
         `<div>เสา H-Frame ห่างขอบถนน ใต้ ${fmt(hfEdge[0])} ม. เหนือ ${fmt(hfEdge[1])} ม. (ขอบเสาต้นใกล้ถนน)</div>` + shiftReport() +
         `<div style="color:var(--muted);font-size:13px">สะพานเดิมรื้อออกแล้ว ความสูงจุดยึด 22 kV ระยะหย่อน ระดับดินที่โคนเสา R.O.W./L.O.W. เป็นค่าสมมติ ปรับได้ที่แถบด้านขวา</div>`;
@@ -970,7 +971,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       el.innerHTML = `<div class="big ${ar.clear === 3 && ar.sep >= ar.sepMin ? 'st-ok' : 'st-warn'}">จัดเฟส ACSR ใหม่: พ้นแนวสะพาน ${ar.clear} จาก 3 เฟส</div>` +
         `<div>เอาวงจรล่าง 120 SAC ออก แล้ววาง ACSR ลงตำแหน่งลูกถ้วยวงจรบน/ล่างที่ดีที่สุดจากการลองทุกแบบ${ar.x3 ? ' รวมตำแหน่งเพิ่มที่ H-Frame ฝั่งเหนือ (ค่าสมมติ)' : ''} แต่ละปลายใช้ตำแหน่งต่างกันได้ ต้องต่อแจมเปอร์จากสายด้านนอกเข้าตำแหน่งใหม่และเรียงเฟสให้ตรง</div>` + phaseTable(ar.ph) +
         `<div>จุดต่ำสุดของสายในช่วงสะพาน (along −70.0 ถึง +70.3) สูงกว่าระดับพื้นสะพาน 100.000: ${ar.ph.map(p => { let y = Infinity; for (let k = 0; k <= 400; k++) { const q = spanPt(p.a, p.b, p.sag, k / 400); if (onBridge(q.x)) y = Math.min(y, q.y); } return `${'ABC'[p.i]} ${f2(y)} ม.`; }).join(', ')}</div>` +
-        `<div>ระยะห่างระหว่างเฟสต่ำสุดตลอดช่วง ${f2(ar.sep)} ม. เกณฑ์ ${f2(ar.sepMin)} ม. (ค่าสมมติ) ${ok(ar.sep >= ar.sepMin - 1e-9)}</div>` +
+        `<div>ระยะห่างระหว่างเฟสต่ำสุดตลอดช่วง ${f2(ar.sep)} ม. เกณฑ์ ${f2(ar.sepMin)} ม. (คู่มือ 22/33 kV ตาราง 8.11) ${ok(ar.sep >= ar.sepMin - 1e-9)}</div>` +
+        (() => { const d = Math.min(...ar.ph.flatMap(p => [p.sS.dz, p.sN.dz]).map(dz => Math.min(Math.abs(dz - 1.5), Math.abs(dz + 1.5)) - 0.24)); return `<div>สายห่างผิวเสา H-Frame ต่ำสุด ${f2(d)} ม. เกณฑ์ 0.20 ม. (ตาราง 8.12) ${ok(d >= 0.2)}</div>`; })() +
         (bad.length ? `<div class="st-bad">ยังล้ำ ${bad.length} เฟส: ${bad.map(p => p.lab.split(':')[0]).join(', ')}</div>` +
           `<div>ปลายฝั่งเหนือต้องอยู่ห่างกึ่งกลาง H-Frame ออกนอกถนนอย่างน้อย: ${ar.need.map(n => `ถ้าปลายใต้ ${fmt(n.dz)} → ${f2(n.dzN)} ม.`).join(', ')} (เส้นตรงในแปลน ไม่รวมสายแกว่ง) ${ar.x3 ? '' : 'ลองติ๊ก "เพิ่มตำแหน่งลูกถ้วยที่ H-Frame ฝั่งเหนือ"'}</div>` : '') +
         `<div style="color:var(--warn)">ต้องตรวจ: ตำแหน่งและความสูงลูกถ้วยจริง (ค่าสมมติ), แรงดึงและการจัดเฟสบนคอนเมื่อสายมาจากคนละตำแหน่ง, ระยะห่างเฟสในแนวดิ่งสำหรับช่วง ${fmt(L22)} ม. (สายแกว่ง/กระพือ), การยึดโยงรับแรงไม่สมดุล, ระยะสายแกว่งเพราะลม</div>`;
@@ -988,7 +990,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       el.innerHTML = `<div class="big ${!inSlab && d >= P.low && c.vDeck >= num('v115') ? 'st-ok' : 'st-warn'}">ทางเลือก: ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)</div>` +
         `<div>ตำแหน่งใหม่ along ${fmt(m[0])} offset ${fmt(m[1])} ${inSlab ? '<span class="st-bad">ยังอยู่ในแผ่นพื้นทางเข้า</span>' : 'พ้นแผ่นพื้นทางเข้า'} ห่างขอบถนน ${fmt(d)} ม. ${lowTxt(d - 0.35)} ${rowTxt(m[1])}</div>` +
         `<div>ช่วงใหม่: ต้นถัดไป ${fmt(sp[0].L)} ม. ช่วงข้าม ${fmt(sp[1].L)} ม. ${Lmax > 200 ? '<span class="st-bad">เกินช่วงยาว LS 200 ม.</span>' : Lmax > 80 ? '<span class="st-warn">เกินช่วงทางตรง SS/SD 80 ม. ต้องเป็นโครงสร้างช่วงยาว LS (≤ 200 ม.)</span>' : ''} มุมเบี่ยงที่เสาใหม่ ${fmt(ang)}° ${ang > 2 ? '(เกิน 2° ต้องใช้แบบทางโค้ง/หัวมุม)' : ''}</div>` +
-        `<div>115 kV ต่ำสุดเหนือ deck LT. ${fmt(c.vDeck)} ม. (หย่อน ${fmt(sp[1].s)} ม.) เกณฑ์ ${fmt(num('v115'))} ม. (ค่าสมมติ) ${ok(c.vDeck >= num('v115'))} 22 kV ใต้ 115 kV ${fmt(sp[1].c22.vDeck)} ม. 7.50 ${ok(vOk(sp[1].c22.vDeck).b)}</div>` +
+        `<div>115 kV ต่ำสุดเหนือ deck LT. ${fmt(c.vDeck)} ม. (หย่อน ${fmt(sp[1].s)} ม.) เกณฑ์ ${fmt(num('v115'))} ม. (115 kV ตาราง 6-2) ${ok(c.vDeck >= num('v115'))} 22 kV ใต้ 115 kV ${fmt(sp[1].c22.vDeck)} ม. 7.50 ${ok(vOk(sp[1].c22.vDeck).b)}</div>` +
         `<div style="color:var(--warn)">เสาฝั่งเหนือยังห่างขอบถนน ${fmt(dN)} ม. กฟข. เป็นผู้ออกแบบ 115 kV ตำแหน่งนี้ใช้เพื่อประกอบการหารือเท่านั้น</div>`;
     }
     // sag table (115 kV)
