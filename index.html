@@ -411,6 +411,14 @@ table.ph th { color: var(--muted); font-weight: 600; }
     o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; (parent || scene).add(o); return o;
   }
   const boxXY = (x0, x1, y0, y1, z0, z1, m, parent) => box(x1 - x0, y1 - y0, z1 - z0, m, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, parent);
+  // PEA prestressed concrete poles are square and taper to the top (A8100): w = face width in m
+  function sqPole(wTop, wBot, h, m, x, y, z, parent) {
+    const g = new THREE.CylinderGeometry(wTop / Math.SQRT2, wBot / Math.SQRT2, h, 4, 1); g.rotateY(Math.PI / 4);
+    const o = new THREE.Mesh(g, m); o.position.set(x, y + h / 2, z); o.castShadow = true;
+    if (m.opacity === undefined || m.opacity === 1) o.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), edgeMat));
+    (parent || scene).add(o); return o;
+  }
+  const POLE_W = { p22: [0.25, 0.42], p16: [0.16, 0.34], p12: [0.15, 0.27] };   // top / ground face width (m): 8108 top 250 mm, holes 251-356 mm; 8105 holes 160-340; 8103 holes 150-270; 22 m ground width extrapolated (ค่าสมมติ)
   function cyl(r1, r2, h, m, x, y, z, parent) {
     const o = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, 12), m);
     o.position.set(x, y + h / 2, z); o.castShadow = true; (parent || scene).add(o); return o;
@@ -608,7 +616,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   }
   const grp = (x, z, parent) => { const g = new THREE.Group(); g.position.set(x, gy(x, z), z); parent.add(g); return g; };
   function tall(x, z, m, parent, h = POLE_TOP) { const g = grp(x, z, parent);
-    cyl(0.2, 0.35, h, m, 0, 0, 0, g);
+    sqPole(...POLE_W.p22, h, m, 0, 0, 0, g);
     if (PARTS) part('SDTG3', m, g, h); else { for (const y of HV_YS) box(0.18, 0.18, 2.4, mat.steel, 0, y + STRING + h - POLE_TOP, 1.2, g); box(0.14, 0.14, 2.6, mat.steel, 0, Y22 - PIN22 + h - POLE_TOP, 1.4, g); }
     return g; }
   // 115 kV conductor points of an SD-TG-3 pole (world): hv = 3 phases x 2 sub-conductors, mv = 22 kV underbuilt
@@ -619,7 +627,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   }
   function hframe(x, z, m, parent, hTop, low) {   // existing H-Frame, head drawn so that its top crossarm carries the top circuit
     const g = grp(x, z, parent), h = hTop + 0.15;
-    for (const dz of [-1.5, 1.5]) cyl(0.16, 0.24, h, m, 0, 0, dz, g);
+    for (const dz of [-1.5, 1.5]) sqPole(...POLE_W.p16, h, m, 0, 0, dz, g);
     if (PARTS) part('HF2221', m, g, h); else box(0.18, 0.18, 6.4, mat.arm, 0, hTop, 0, g);
     if (low && (Math.abs(low.h - (hTop - 1.6)) > 0.05 || low.dz.some(d => Math.abs(d) > 3.0))) {   // lower crossarm at the assumed position
       const z0 = Math.min(-3, ...low.dz) - 0.2, z1 = Math.max(3, ...low.dz) + 0.2; boxXY(-0.1, 0.1, low.h - 0.08, low.h + 0.08, z0, z1, mat.steel, g);
@@ -627,7 +635,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     return g;
   }
   function single(x, z, m, h, parent, kind = 'P2207') { const g = grp(x, z, parent);
-    cyl(0.12, 0.2, h, m, 0, 0, 0, g); if (PARTS) part(kind, m, g, h); else box(0.14, 0.14, 2.4, mat.arm, 0, h - 0.6, 0, g); return g; }
+    sqPole(...POLE_W.p12, h, m, 0, 0, 0, g); if (PARTS) part(kind, m, g, h); else box(0.14, 0.14, 2.4, mat.arm, 0, h - 0.6, 0, g); return g; }
   function ring(x, z, r, color, parent) {
     const m = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.5, 40), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: .85 }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, Math.max(gy(x, z), 0) + 0.08, z); parent.add(m);
@@ -900,15 +908,15 @@ table.ph th { color: var(--muted); font-weight: 600; }
       const why = [inRoad && (onSlab(x) ? 'อยู่ในแผ่นพื้นทางเข้า/สะพาน' : 'อยู่บนผิวถนน'), inLow && 'อยู่ใน L.O.W. (เขตงานก่อสร้าง)', outRow && 'อยู่นอก R.O.W. (ต้องใช้ที่ดินเอกชน)', gnd < DOH.hwl && `ดินต่ำกว่า H.W.L. (${f2(gnd)})`].filter(Boolean);
       (inRoad || outRow ? bad : inLow || gnd < DOH.hwl ? warn : []).push(...why.map(w => `${name}: ${w}`));
       rows.push(`<tr><td>${name}</td><td>${fmt(o)}</td><td>${fmt(d)}</td><td>${f2(gnd)}</td><td>${why.length ? `<span class="${inRoad || outRow ? 'st-bad' : 'st-warn'}">${why.join(', ')}</span>` : '<span class="st-ok">ได้</span>'}</td></tr>`); };
-    P115.forEach(([x, z], i) => chk(`115 kV ${['ใต้ถัดไป', 'ใต้', 'เหนือ', 'เหนือถัดไป'][i]}`, x, -z, 0.35));
-    HFP().forEach((f, i) => f.forEach(([x, o], k) => chk(`H-Frame ${i ? 'เหนือ' : 'ใต้'} ต้น ${k + 1}`, x, o, 0.24)));
-    chk('เสา 22 kV', P22[0], -P22[1], 0.2);
+    P115.forEach(([x, z], i) => chk(`115 kV ${['ใต้ถัดไป', 'ใต้', 'เหนือ', 'เหนือถัดไป'][i]}`, x, -z, POLE_W.p22[1] / 2));
+    HFP().forEach((f, i) => f.forEach(([x, o], k) => chk(`H-Frame ${i ? 'เหนือ' : 'ใต้'} ต้น ${k + 1}`, x, o, POLE_W.p16[1] / 2)));
+    chk('เสา 22 kV', P22[0], -P22[1], POLE_W.p12[1] / 2);
     const enc = S.pl.acsr.filter(S.pl.enc).length, c115 = S.span115[1].c;
     if (enc) bad.push(`สาย ACSR 22 kV ยังล้ำแนวสะพาน ${enc} เฟส (เหนือพื้นสะพาน หรือห่างขอบ < 1.80 ม.)`);
     if (c115.over) warn.push(`สาย 115 kV ยังพาดเหนือพื้นสะพาน LT. (ระยะดิ่ง ${fmt(c115.vDeck)} ม. เกณฑ์ ${fmt(num('v115'))} ม.)`);
     else if (c115.h < 2.30) bad.push(`สาย 115 kV ห่างขอบสะพาน ${f2(c115.h)} ม. น้อยกว่า 2.30 ม. (คำแนะนำ 115 kV ตาราง 6-1)`);
     let need22 = NaN; for (let t = -5; t <= 30; t += 0.25) { if (phasesAt(t).every(c => !c.over && c.h >= 1.8)) { need22 = t; break; } }
-    const max22 = Math.min(...[DOH.hfS, DOH.hfN].flat().map(([, o]) => half - Math.abs(o) - 0.24)), max115 = Math.min(...DOH.p115.map(([, o]) => half - o - 0.35));
+    const max22 = Math.min(...[DOH.hfS, DOH.hfN].flat().map(([, o]) => half - Math.abs(o) - POLE_W.p16[1] / 2)), max115 = Math.min(...DOH.p115.map(([, o]) => half - o - POLE_W.p22[1] / 2));
     const arm = PARTS ? Math.max(...['hv0', 'hv1', 'hv2'].flatMap(k => PARTS.SDTG3.pts[k].map(p => p.z))) : 2.4;   // 115 kV conductors sit this far from the pole towards the road
     const need115 = Math.max(...DOH.p115.slice(1, 3).map(([, o]) => -DOH.lt[0] + 2.30 + arm - o));   // conductors at least 2.30 m beyond the LT deck edge
     return `<div style="margin-top:8px;font-weight:600">ขยับแนวเสา: 115 kV ${fmt(SH.s115)} ม. · 22 kV ${fmt(SH.s22)} ม. (บวก = ออกจากถนน)</div>` +
@@ -933,7 +941,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const lowTxt = d => d >= P.low ? `อยู่นอก L.O.W. (${fmt(P.low)} ม., ค่าสมมติ)` : `<span class="st-bad">อยู่ใน L.O.W. (${fmt(P.low)} ม., ค่าสมมติ)</span>`;
     const rowTxt = o => Math.abs(o) <= P.ROW / 2 ? 'อยู่ในเขตทาง (ค่าสมมติ)' : '<span class="st-warn">อยู่นอกเขตทาง (ค่าสมมติ)</span>';
     const v115 = num('v115');
-    const S1in = onSlab(P115[1][0]) && -P115[1][1] - 0.35 <= -DOH.lt[0];
+    const S1in = onSlab(P115[1][0]) && -P115[1][1] - POLE_W.p22[1] / 2 <= -DOH.lt[0];
     const hfEdge = HFP().map(poles => Math.min(...poles.map(([px, o]) => -o - edgeE(px))));
     if (P.mode === 6 && S.rig) {
       const { H, all, pick } = S.rig, e = pick.e, sf = e.sf, hm = v => isFinite(v) ? f2(Math.max(v, 0)) : '-';
@@ -951,8 +959,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       const n22 = pl.acsr.filter(pl.enc).length, c = cross.c;
       el.innerHTML = `<div class="big st-bad">สะพานใหม่ตามแบบ ทล.: จุดขัดแย้ง</div>` +
         (S1in ? `<div><b class="st-bad">1.</b> เสา 115 kV ฝั่งใต้ (along ${fmt(P115[1][0])}, offset ${fmt(-P115[1][1])}) อยู่ในแผ่นพื้นทางเข้า LT. (along ${fmt(DOH.slab[0])} ถึง ${fmt(DOH.abut[0])}, offset +1.5 ถึง +14.5) <span class="st-bad">ต้องย้าย</span></div>`
-          : `<div><b class="st-ok">1.</b> เสา 115 kV ฝั่งใต้ (offset ${fmt(-P115[1][1])}) พ้นแผ่นพื้นทางเข้าแล้ว ขอบเสาห่างขอบแผ่นพื้น ${fmt(-P115[1][1] - 0.35 - 14.5)} ม.</div>`) +
-        `<div><b class="st-warn">2.</b> เสา 115 kV ฝั่งเหนือ (along ${fmt(P115[2][0])}) อยู่เลยแผ่นพื้นทางเข้า ${fmt(P115[2][0] - DOH.slab[1])} ม. ศูนย์กลางเสาห่างขอบถนนที่เรียวลง ${fmt(dN)} ม. ${lowTxt(dN - 0.35)} ใกล้ลาดคันทาง</div>` +
+          : `<div><b class="st-ok">1.</b> เสา 115 kV ฝั่งใต้ (offset ${fmt(-P115[1][1])}) พ้นแผ่นพื้นทางเข้าแล้ว ขอบเสาห่างขอบแผ่นพื้น ${fmt(-P115[1][1] - POLE_W.p22[1] / 2 - 14.5)} ม.</div>`) +
+        `<div><b class="st-warn">2.</b> เสา 115 kV ฝั่งเหนือ (along ${fmt(P115[2][0])}) อยู่เลยแผ่นพื้นทางเข้า ${fmt(P115[2][0] - DOH.slab[1])} ม. ศูนย์กลางเสาห่างขอบถนนที่เรียวลง ${fmt(dN)} ม. ${lowTxt(dN - POLE_W.p22[1] / 2)} ใกล้ลาดคันทาง</div>` +
         `<div><b class="st-warn">3.</b> 115 kV ช่วงข้าม ${fmt(cross.L)} ม. พาดเหนือ deck LT. ตลอดความยาว (สายห่างแกน offset ประมาณ ${fmt(-(c.pDeck ? c.pDeck.z : NaN))} ม.) หย่อน ${fmt(cross.s)} ม. ที่ ${num('tA')} °C ต่ำสุดเหนือ deck ${fmt(c.vDeck)} ม. เกณฑ์ ${fmt(v115)} ม. (115 kV ตาราง 6-2) ${ok(c.vDeck >= v115)} 22 kV ใต้ 115 kV เหนือ deck ${fmt(cross.c22.vDeck)} ม. 6.10 ${ok(vOk(cross.c22.vDeck).a)} 7.50 ${ok(vOk(cross.c22.vDeck).b)}</div>` +
         `<div><b class="${n22 ? 'st-bad' : 'st-ok'}">4.</b> 22 kV H-Frame ช่วง ${fmt(L22)} ม. ACSR ล้ำแนวสะพาน RT. ${n22} เฟส (อยู่เหนือพื้นสะพาน หรือห่างขอบ &lt; 1.80 ม.)</div>` + phaseTable([...pl.acsr, ...pl.sac]) +
         `<div>เสา H-Frame ห่างขอบถนน ใต้ ${fmt(hfEdge[0])} ม. เหนือ ${fmt(hfEdge[1])} ม. (ขอบเสาต้นใกล้ถนน)</div>` + shiftReport() +
@@ -972,7 +980,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
         `<div>เอาวงจรล่าง 120 SAC ออก แล้ววาง ACSR ลงตำแหน่งลูกถ้วยวงจรบน/ล่างที่ดีที่สุดจากการลองทุกแบบ${ar.x3 ? ' รวมตำแหน่งเพิ่มที่ H-Frame ฝั่งเหนือ (ค่าสมมติ)' : ''} แต่ละปลายใช้ตำแหน่งต่างกันได้ ต้องต่อแจมเปอร์จากสายด้านนอกเข้าตำแหน่งใหม่และเรียงเฟสให้ตรง</div>` + phaseTable(ar.ph) +
         `<div>จุดต่ำสุดของสายในช่วงสะพาน (along −70.0 ถึง +70.3) สูงกว่าระดับพื้นสะพาน 100.000: ${ar.ph.map(p => { let y = Infinity; for (let k = 0; k <= 400; k++) { const q = spanPt(p.a, p.b, p.sag, k / 400); if (onBridge(q.x)) y = Math.min(y, q.y); } return `${'ABC'[p.i]} ${f2(y)} ม.`; }).join(', ')}</div>` +
         `<div>ระยะห่างระหว่างเฟสต่ำสุดตลอดช่วง ${f2(ar.sep)} ม. เกณฑ์ ${f2(ar.sepMin)} ม. (คู่มือ 22/33 kV ตาราง 8.11) ${ok(ar.sep >= ar.sepMin - 1e-9)}</div>` +
-        (() => { const d = Math.min(...ar.ph.flatMap(p => [p.sS.dz, p.sN.dz]).map(dz => Math.min(Math.abs(dz - 1.5), Math.abs(dz + 1.5)) - 0.24)); return `<div>สายห่างผิวเสา H-Frame ต่ำสุด ${f2(d)} ม. เกณฑ์ 0.20 ม. (ตาราง 8.12) ${ok(d >= 0.2)}</div>`; })() +
+        (() => { const d = Math.min(...ar.ph.flatMap(p => [p.sS.dz, p.sN.dz]).map(dz => Math.min(Math.abs(dz - 1.5), Math.abs(dz + 1.5)) - 0.09)); return `<div>สายห่างผิวเสา H-Frame ต่ำสุด ${f2(d)} ม. เกณฑ์ 0.20 ม. (ตาราง 8.12) ${ok(d >= 0.2)}</div>`; })() +
         (bad.length ? `<div class="st-bad">ยังล้ำ ${bad.length} เฟส: ${bad.map(p => p.lab.split(':')[0]).join(', ')}</div>` +
           `<div>ปลายฝั่งเหนือต้องอยู่ห่างกึ่งกลาง H-Frame ออกนอกถนนอย่างน้อย: ${ar.need.map(n => `ถ้าปลายใต้ ${fmt(n.dz)} → ${f2(n.dzN)} ม.`).join(', ')} (เส้นตรงในแปลน ไม่รวมสายแกว่ง) ${ar.x3 ? '' : 'ลองติ๊ก "เพิ่มตำแหน่งลูกถ้วยที่ H-Frame ฝั่งเหนือ"'}</div>` : '') +
         `<div style="color:var(--warn)">ต้องตรวจ: ตำแหน่งและความสูงลูกถ้วยจริง (ค่าสมมติ), แรงดึงและการจัดเฟสบนคอนเมื่อสายมาจากคนละตำแหน่ง, ระยะห่างเฟสในแนวดิ่งสำหรับช่วง ${fmt(L22)} ม. (สายแกว่ง/กระพือ), การยึดโยงรับแรงไม่สมดุล, ระยะสายแกว่งเพราะลม</div>`;
@@ -988,7 +996,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       const ang = (() => { const a = sp[0].a, b = sp[0].b, q = sp[1].b, u = [b[0] - a[0], b[1] - a[1]], w = [q[0] - b[0], q[1] - b[1]];
         return Math.abs(Math.atan2(u[0] * w[1] - u[1] * w[0], u[0] * w[0] + u[1] * w[1])) * 180 / Math.PI; })();
       el.innerHTML = `<div class="big ${!inSlab && d >= P.low && c.vDeck >= num('v115') ? 'st-ok' : 'st-warn'}">ทางเลือก: ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)</div>` +
-        `<div>ตำแหน่งใหม่ along ${fmt(m[0])} offset ${fmt(m[1])} ${inSlab ? '<span class="st-bad">ยังอยู่ในแผ่นพื้นทางเข้า</span>' : 'พ้นแผ่นพื้นทางเข้า'} ห่างขอบถนน ${fmt(d)} ม. ${lowTxt(d - 0.35)} ${rowTxt(m[1])}</div>` +
+        `<div>ตำแหน่งใหม่ along ${fmt(m[0])} offset ${fmt(m[1])} ${inSlab ? '<span class="st-bad">ยังอยู่ในแผ่นพื้นทางเข้า</span>' : 'พ้นแผ่นพื้นทางเข้า'} ห่างขอบถนน ${fmt(d)} ม. ${lowTxt(d - POLE_W.p22[1] / 2)} ${rowTxt(m[1])}</div>` +
         `<div>ช่วงใหม่: ต้นถัดไป ${fmt(sp[0].L)} ม. ช่วงข้าม ${fmt(sp[1].L)} ม. ${Lmax > 200 ? '<span class="st-bad">เกินช่วงยาว LS 200 ม.</span>' : Lmax > 80 ? '<span class="st-warn">เกินช่วงทางตรง SS/SD 80 ม. ต้องเป็นโครงสร้างช่วงยาว LS (≤ 200 ม.)</span>' : ''} มุมเบี่ยงที่เสาใหม่ ${fmt(ang)}° ${ang > 2 ? '(เกิน 2° ต้องใช้แบบทางโค้ง/หัวมุม)' : ''}</div>` +
         `<div>115 kV ต่ำสุดเหนือ deck LT. ${fmt(c.vDeck)} ม. (หย่อน ${fmt(sp[1].s)} ม.) เกณฑ์ ${fmt(num('v115'))} ม. (115 kV ตาราง 6-2) ${ok(c.vDeck >= num('v115'))} 22 kV ใต้ 115 kV ${fmt(sp[1].c22.vDeck)} ม. 7.50 ${ok(vOk(sp[1].c22.vDeck).b)}</div>` +
         `<div style="color:var(--warn)">เสาฝั่งเหนือยังห่างขอบถนน ${fmt(dN)} ม. กฟข. เป็นผู้ออกแบบ 115 kV ตำแหน่งนี้ใช้เพื่อประกอบการหารือเท่านั้น</div>`;
