@@ -210,6 +210,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <div><span style="background:#cfccc2"></span>สะพานคู่ใหม่ตามแบบ ทล.</div>
         <div><span style="background:#c0262d"></span>จุดขัดแย้ง / รื้อถอน</div>
         <div><span style="background:#e5934d"></span>ต้องตรวจเพิ่ม</div>
+        <div><span style="background:#e0242c;opacity:.6"></span>ช่วงสายที่ล้ำแนวสะพาน (ส้ม = เหนือถนน)</div>
         <div><span style="background:#1c2f6e"></span>สาย 115 kV (สายคู่)</div>
         <div><span style="background:#6b4a1d"></span>สาย 22 kV ACSR</div>
         <div><span style="background:#2b2b2b"></span>สาย 22 kV 120 SAC</div>
@@ -299,6 +300,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const lineMat = {
     acsr: B(0x6b4a1d), sac: B(0x2b2b2b), hv: B(0x1c2f6e), neu: B(0x1f9a55), neuHv: B(0x0f6b38),
     ghost: new THREE.MeshBasicMaterial({ color: 0xc0262d, transparent: true, opacity: .25 }), bad: B(0xc0262d),
+    enc: new THREE.MeshBasicMaterial({ color: 0xe0242c, transparent: true, opacity: .55, depthWrite: false }),
+    encRoad: new THREE.MeshBasicMaterial({ color: 0xe5934d, transparent: true, opacity: .5, depthWrite: false }),
     row: new THREE.LineDashedMaterial({ color: 0x2f6fd0, dashSize: 2, gapSize: 1.2 }),
     low: new THREE.LineDashedMaterial({ color: 0xd07a1a, dashSize: 1, gapSize: 0.8 }),
     dim: new THREE.LineBasicMaterial({ color: 0x111111 }), dimBad: new THREE.LineBasicMaterial({ color: 0xc0262d }),
@@ -527,14 +530,20 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const inDeck = z => (z >= DOH.lt[0] && z <= DOH.lt[1]) || (z >= DOH.rt[0] && z <= DOH.rt[1]);
   const deckGap = z => inDeck(z) ? 0 : Math.min(...[...DOH.lt, ...DOH.rt].map(e => Math.abs(z - e)));
   function clearance(a, b, sag) {
-    const r = { vDeck: Infinity, pDeck: null, vRoad: Infinity, pRoad: null, h: Infinity, pH: null, over: false };
-    for (let i = 0; i <= 400; i++) {
-      const p = spanPt(a, b, sag, i / 400);
+    const r = { vDeck: Infinity, pDeck: null, vRoad: Infinity, pRoad: null, h: Infinity, pH: null, over: false, enc: [] };
+    const N = 2000; let cur = null;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, p = spanPt(a, b, sag, t);
       const road = p.z >= -edgeW(p.x) && p.z <= edgeE(p.x);
       if (road && p.y < r.vRoad) { r.vRoad = p.y; r.pRoad = p; }
       if (onSlab(p.x) && inDeck(p.z)) { r.over = true; if (p.y < r.vDeck) { r.vDeck = p.y; r.pDeck = p; } }
       if (onBridge(p.x)) { const d = deckGap(p.z); if (d < r.h) { r.h = d; r.pH = p; } }
+      // encroachment runs along the span: over the deck / approach slab, within 1.80 m of the bridge edge, over the road beyond
+      const k = onSlab(p.x) && inDeck(p.z) ? 'over' : onBridge(p.x) && deckGap(p.z) < 1.8 ? 'near' : !onSlab(p.x) && road ? 'road' : null;
+      if (cur && cur.k !== k) { r.enc.push(cur); cur = null; }
+      if (k) { if (!cur) cur = { k, t0: t, x0: p.x }; cur.t1 = t; cur.x1 = p.x; }
     }
+    if (cur) r.enc.push(cur);
     return r;
   }
 
@@ -608,8 +617,9 @@ table.ph th { color: var(--muted); font-weight: 600; }
     pl.acsr.forEach(p => { out(0, p.dz, pl.hT, lineMat.acsr, 0.6); out(1, p.dz, pl.hT, lineMat.acsr, 0.6); });
     pl.sac.forEach(p => { out(0, p.dz, pl.hL, lineMat.sac, 0.6); out(1, p.dz, pl.hL, lineMat.sac, 0.6); });
     if (mode < 2) {
-      pl.acsr.forEach(p => polesG.add(wire(p.a, p.b, p.sag, mode === 1 && pl.enc(p) ? lineMat.bad : lineMat.acsr, 0.035)));
+      pl.acsr.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.acsr, 0.035)));
       pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.sac, 0.06)));
+      if (mode === 1) [...pl.acsr, ...pl.sac].forEach(p => encDraw(p, polesG));
       if (mode === 1) {
         const w = pl.acsr.filter(p => p.c.pDeck).sort((p, q) => p.c.vDeck - q.c.vDeck)[0];
         if (w) vdim(w.c.pDeck, `ACSR เหนือ deck RT. ${fmt(w.c.vDeck)} ม.`, vOk(w.c.vDeck).b ? NEW : BAD, polesG);
@@ -619,7 +629,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     } else {
       pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.ghost, 0.06)));
       put(polesG, 'รื้อวงจร 120 SAC ช่วงข้าม', -40, gy() + pl.hL - 3.5, HF[0][1] + 2, BAD);
-      pl.moved.forEach(p => polesG.add(wire(p.a, p.b, p.sag, p.moved ? lineMat.neu : lineMat.acsr, 0.04)));
+      pl.moved.forEach(p => { polesG.add(wire(p.a, p.b, p.sag, p.moved ? lineMat.neu : lineMat.acsr, 0.04)); encDraw(p, polesG); });
       const mv = pl.moved.filter(p => p.moved);
       put(polesG, mv.length ? `ย้าย ACSR ${mv.length} เฟส ลงลูกถ้วยวงจรล่าง (ตำแหน่ง SAC เดิม)` : 'ไม่มีเฟส ACSR ล้ำแนวสะพาน', 20, gy() + pl.hT + 1.5, HF[1][1] - 3, NEW);
       const w = pl.moved.filter(p => p.c.pDeck).sort((p, q) => p.c.vDeck - q.c.vDeck)[0];
@@ -630,11 +640,23 @@ table.ph th { color: var(--muted); font-weight: 600; }
   }
 
   // ---------- status panel ----------
+  const ENC_N = { over: 'เหนือพื้นสะพาน/แผ่นพื้นทางเข้า', near: 'ห่างขอบสะพาน < 1.80 ม.', road: 'เหนือถนน' };
+  const encTxt = c => c.enc.length ? c.enc.map(e => `${ENC_N[e.k]} along ${fmt(Math.min(e.x0, e.x1))} ถึง ${fmt(Math.max(e.x0, e.x1))} (${fmt(Math.abs(e.x1 - e.x0))} ม.)`).join('; ') : 'ไม่ล้ำ';
+  function encDraw(p, parent) {   // red overlay on the encroaching part of a conductor + a label at the middle of the longest run
+    const runs = p.c.enc;
+    runs.forEach(e => { const pts = []; for (let i = 0; i <= 24; i++) pts.push(spanPt(p.a, p.b, p.sag, e.t0 + (e.t1 - e.t0) * i / 24));
+      parent.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.14, 6), e.k === 'road' ? lineMat.encRoad : lineMat.enc)); });
+    const L = runs.filter(e => e.k !== 'road').sort((u, v) => Math.abs(v.x1 - v.x0) - Math.abs(u.x1 - u.x0))[0];
+    if (L) { const m = spanPt(p.a, p.b, p.sag, (L.t0 + L.t1) / 2);
+      put(parent, `${p.kind} ${p.i + 1} ล้ำ ${fmt(Math.abs(L.x1 - L.x0))} ม.`, m.x, m.y + 1.0 + 0.9 * p.i, m.z, { size: 1.0, color: '#fff', bg: 'rgba(192,38,45,.88)' }); }
+  }
   function phaseTable(arr) {
     return '<table class="ph"><tr><th>เฟส</th><th>สูงจุดยึด</th><th>ราบถึงขอบสะพาน</th><th>ดิ่งเหนือ deck</th><th>6.10</th><th>7.50</th></tr>' +
       arr.map(p => { const v = p.c.over ? p.c.vDeck : p.c.vRoad, k = vOk(v);
         return `<tr><td>${p.kind} ${p.i + 1} (${fmt(p.dz)})${p.moved ? ' ย้าย' : ''}</td><td>${f2(p.h)}</td><td>${p.c.over ? '<span class="st-warn">เหนือพื้น</span>' : f2(p.c.h) + ' ' + ok(p.c.h >= 1.8, '✓', '✗')}</td>` +
-          `<td>${p.c.over ? f2(p.c.vDeck) : isFinite(p.c.vRoad) ? '(ถนน) ' + f2(p.c.vRoad) : '-'}</td><td>${isFinite(v) ? ok(k.a, '✓', '✗') : '-'}</td><td>${isFinite(v) ? ok(k.b, '✓', '✗') : '-'}</td></tr>`; }).join('') + '</table>';
+          `<td>${p.c.over ? f2(p.c.vDeck) : isFinite(p.c.vRoad) ? '(ถนน) ' + f2(p.c.vRoad) : '-'}</td><td>${isFinite(v) ? ok(k.a, '✓', '✗') : '-'}</td><td>${isFinite(v) ? ok(k.b, '✓', '✗') : '-'}</td></tr>` +
+          `<tr><td colspan="6" style="text-align:left;font-size:12px;color:${p.c.enc.some(e => e.k !== 'road') ? 'var(--bad)' : 'var(--muted)'}">ช่วงล้ำ: ${encTxt(p.c)}</td></tr>`; }).join('') + '</table>' +
+      '<div style="color:var(--muted);font-size:12px">along วัดจากกึ่งกลางสะพาน (+ เหนือ) สะพาน −70.0 ถึง +70.3 แผ่นพื้นทางเข้าถึง −80.1/+80.5 ระยะทางราบไม่รวมสายแกว่งเพราะลม</div>';
   }
   function status() {
     const el = document.getElementById('status'), pl = S.pl, cross = S.span115[1];
