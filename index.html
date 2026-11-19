@@ -210,7 +210,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <div><span style="background:#cfccc2"></span>สะพานคู่ใหม่ตามแบบ ทล.</div>
         <div><span style="background:#c0262d"></span>จุดขัดแย้ง / รื้อถอน</div>
         <div><span style="background:#e5934d"></span>ต้องตรวจเพิ่ม</div>
-        <div><span style="background:#e0242c;opacity:.6"></span>ช่วงสายที่ล้ำแนวสะพาน (ส้ม = เหนือถนน)</div>
+        <div><span style="background:#e0242c;opacity:.6"></span>สายที่ล้ำแนวสะพาน แดงทั้งเส้น (ส้ม = ช่วงเหนือถนน)</div>
         <div><span style="background:#1c2f6e"></span>สาย 115 kV (สายคู่)</div>
         <div><span style="background:#6b4a1d"></span>สาย 22 kV ACSR</div>
         <div><span style="background:#2b2b2b"></span>สาย 22 kV 120 SAC</div>
@@ -643,8 +643,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const ENC_N = { over: 'เหนือพื้นสะพาน/แผ่นพื้นทางเข้า', near: 'ห่างขอบสะพาน < 1.80 ม.', road: 'เหนือถนน' };
   const encTxt = c => c.enc.length ? c.enc.map(e => `${ENC_N[e.k]} along ${fmt(Math.min(e.x0, e.x1))} ถึง ${fmt(Math.max(e.x0, e.x1))} (${fmt(Math.abs(e.x1 - e.x0))} ม.)`).join('; ') : 'ไม่ล้ำ';
   function encDraw(p, parent) {   // red overlay on the encroaching part of a conductor + a label at the middle of the longest run
-    const runs = p.c.enc;
-    runs.forEach(e => { const pts = []; for (let i = 0; i <= 24; i++) pts.push(spanPt(p.a, p.b, p.sag, e.t0 + (e.t1 - e.t0) * i / 24));
+    const runs = p.c.enc, bad = runs.some(e => e.k !== 'road');   // a conductor that encroaches anywhere is red over its whole span
+    (bad ? [{ k: 'over', t0: 0, t1: 1 }] : runs).forEach(e => { const pts = []; for (let i = 0; i <= 24; i++) pts.push(spanPt(p.a, p.b, p.sag, e.t0 + (e.t1 - e.t0) * i / 24));
       parent.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.14, 6), e.k === 'road' ? lineMat.encRoad : lineMat.enc)); });
     const L = runs.filter(e => e.k !== 'road').sort((u, v) => Math.abs(v.x1 - v.x0) - Math.abs(u.x1 - u.x0))[0];
     if (L) { const m = spanPt(p.a, p.b, p.sag, (L.t0 + L.t1) / 2);
