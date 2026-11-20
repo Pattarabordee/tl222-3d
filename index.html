@@ -119,6 +119,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="vdeN" hidden>H-Frame เหนือ (วงจรล่าง)</button>
       <select id="poleSel" aria-label="ซูมไปที่หัวเสา" title="หรือดับเบิลคลิกที่เสาในโมเดล"><option value="">ซูมหัวเสา…</option></select>
       <a href="parts.html">ชุดอุปกรณ์ตามแบบ</a>
+      <a href="route.html">แนวทางทั้งโครงการ</a>
     </div>
     <div id="boqv" hidden>
       <h2 id="boqTitle">ปริมาณงาน (BOQ)</h2>
@@ -159,8 +160,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
 
     <section>
       <h2>ค่าสมมติ (ปรับได้)</h2>
-      <div class="field"><label for="row">R.O.W. ความกว้างเขตทางทั้งหมด (รอแขวงทางหลวง)</label><output id="rowo"></output>
-        <input id="row" type="range" min="20" max="80" step="1" value="40"></div>
+      <div class="field"><label for="row">R.O.W. ความกว้างเขตทางทั้งหมด (เดิม 30 ม. จาก DWG สำรวจ ทล.)</label><output id="rowo"></output>
+        <input id="row" type="range" min="20" max="80" step="1" value="30"></div>
       <div class="field"><label for="low">L.O.W. ห่างขอบทาง/ขอบสะพานใหม่ (รอแขวงทางหลวง)</label><output id="lowo"></output>
         <input id="low" type="range" min="0" max="10" step="0.5" value="1.5"></div>
       <div class="calc">
@@ -369,7 +370,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const i = Math.min(Math.max(Math.floor(fz), 0), DEM.nz - 2), j = Math.min(Math.max(Math.floor(fa), 0), DEM.na - 2), u = Math.min(Math.max(fa - j, 0), 1), w = Math.min(Math.max(fz - i, 0), 1), H = DEM.h;
     return H[i][j] * (1 - u) * (1 - w) + H[i][j + 1] * u * (1 - w) + H[i + 1][j] * (1 - u) * w + H[i + 1][j + 1] * u * w; };
 
-  const P = { mode: 1, ROW: 40, low: 1.5, g0: 99.0 };
+  const P = { mode: 1, ROW: 30, low: 1.5, g0: 99.0 };
   const num = id => parseFloat(document.getElementById(id).value);
   const list = id => document.getElementById(id).value.split(/[,;\s]+/).map(parseFloat).filter(v => !isNaN(v));
 
@@ -651,7 +652,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     for (const s of [-1, 1]) {
       const z = s * P.ROW / 2, y = gy() + 0.3;
       line([V(-EXT + 5, y, z), V(EXT - 5, y, z)], lineMat.row, rowG);
-      put(rowG, `R.O.W. ${fmt(P.ROW)} ม. (ค่าสมมติ รอแขวงทางหลวง)`, -150, y + 2, z, { size: 1.5, color: '#1d4f9a' });
+      put(rowG, `R.O.W. ${fmt(P.ROW)} ม. ${P.ROW === 30 ? '(เขตทางเดิม DWG สำรวจ ทล.)' : '(ค่าที่ผู้ใช้ปรับ)'}`, -150, y + 2, z, { size: 1.5, color: '#1d4f9a' });
       if (P.mode >= 1) {
         const pts = []; for (let x = -EXT + 5; x <= EXT - 5; x += 2) pts.push(V(x, 0.25, s * ((s > 0 ? edgeE(x) : edgeW(x)) + P.low)));
         line(pts, lineMat.low, rowG);
@@ -1041,7 +1042,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     return `<div style="margin-top:8px;font-weight:600">ขยับแนวเสา: 115 kV ${fmt(SH.s115)} ม. · 22 kV ${fmt(SH.s22)} ม. (บวก = ออกจากถนน)</div>` +
       '<table class="ph"><tr><th>เสา</th><th>offset</th><th>ห่างขอบทาง</th><th>ระดับดิน</th><th>ผล</th></tr>' + rows.join('') + '</table>' +
       `<div>ระยะขยับที่ต้องการ: 22 kV อย่างน้อย <b>${isNaN(need22) ? 'มากกว่า 30' : fmt(need22)} ม.</b> สาย ACSR ทุกเฟสห่างขอบสะพาน 1.80 ม. ขึ้นไป · 115 kV อย่างน้อย <b>${fmt(need115)} ม.</b> สายจึงห่างขอบสะพาน LT. 2.30 ม. ขึ้นไป</div>` +
-      `<div>R.O.W. ${fmt(P.ROW)} ม. (ค่าสมมติ) ให้ขยับได้ไม่เกิน 22 kV ${fmt(max22)} ม. · 115 kV ${fmt(max115)} ม.</div>` +
+      `<div>R.O.W. ${fmt(P.ROW)} ม. ${P.ROW === 30 ? '(เขตทางเดิม ข้างละ ~15 ม. จาก DWG สำรวจ ทล.)' : '(ค่าที่ผู้ใช้ปรับ)'} ให้ขยับได้ไม่เกิน 22 kV ${fmt(max22)} ม. · 115 kV ${fmt(max115)} ม.</div>` +
       (bad.length ? `<div class="st-bad">ทำไม่ได้เพราะ: ${bad.join('; ')}</div>` : '<div class="st-ok">ไม่พบปัจจัยที่ทำให้ขยับไม่ได้ในโมเดล</div>') +
       (warn.length ? `<div class="st-warn">ต้องระวัง: ${warn.join('; ')}</div>` : '') +
       '<div style="color:var(--muted);font-size:12.5px">ปัจจัยที่ยังไม่ได้ตรวจในโมเดล: ที่ดิน/อาคาร/ต้นไม้นอกเขตทาง, มุมหักแนวกับเสาต้นถัดไปนอกโมเดล (ต้องมีเสาหักมุมหรือยึดปลาย), ระยะห่างจากสิ่งปลูกสร้างอื่น, สภาพดินและการเข้าถึงหน้างาน, การดับไฟระหว่างย้าย</div>';
@@ -1105,7 +1106,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const el = document.getElementById('status'), pl = S.pl, cross = S.span115[1];
     const eN = edgeW(P115[2][0]), dN = -P115[2][1] - eN;
     const lowTxt = d => d >= P.low ? `อยู่นอก L.O.W. (${fmt(P.low)} ม., ค่าสมมติ)` : `<span class="st-bad">อยู่ใน L.O.W. (${fmt(P.low)} ม., ค่าสมมติ)</span>`;
-    const rowTxt = o => Math.abs(o) <= P.ROW / 2 ? 'อยู่ในเขตทาง (ค่าสมมติ)' : '<span class="st-warn">อยู่นอกเขตทาง (ค่าสมมติ)</span>';
+    const rowTxt = o => Math.abs(o) <= P.ROW / 2 ? 'อยู่ในเขตทาง' : '<span class="st-warn">อยู่นอกเขตทาง</span>';
     const v115 = num('v115');
     const S1in = onSlab(P115[1][0]) && -P115[1][1] - POLE_W.p22[1] / 2 <= -DOH.lt[0];
     const hfEdge = HFP().map(poles => Math.min(...poles.map(([px, o]) => -o - edgeE(px))));

@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>แนวทาง ทล.222 และเสาไฟฟ้า</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root {
+  --bg: #eef1f0; --panel: #fbfcfb; --fg: #1d2622; --muted: #5d6b64; --line: #d3dad6; --map: #f4f5f1;
+  --accent: #5b2a86; --ok: #1f7a46; --warn: #b4560f; --bad: #c0262d;
+  --f-body: "Sarabun", "Leelawadee UI", "Tahoma", sans-serif; --f-head: "IBM Plex Sans Thai", "Sarabun", sans-serif; --f-num: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121715; --panel: #1a201d; --fg: #e4ebe7; --muted: #95a39b; --line: #2e3833; --map: #171c1a;
+  --accent: #b48ce0; --ok: #57c486; --warn: #e5934d; --bad: #f06a6f; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #121715; --panel: #1a201d; --fg: #e4ebe7; --muted: #95a39b; --line: #2e3833; --map: #171c1a;
+  --accent: #b48ce0; --ok: #57c486; --warn: #e5934d; --bad: #f06a6f; color-scheme: dark }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--f-body); }
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 360px; height: 100%; }
+.stage { position: relative; min-width: 0; min-height: 0; background: var(--map); }
+#c { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+.tools { position: absolute; top: max(12px, env(safe-area-inset-top, 0px)); left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+.tools > * { pointer-events: auto; }
+button, select, .tools a { font: 600 14px var(--f-body); border: 1px solid var(--line); background: var(--panel); color: var(--fg); padding: 6px 12px; border-radius: 6px; cursor: pointer; text-decoration: none; }
+button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tools a { border-color: var(--accent); background: var(--accent); color: #fff; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 13px; line-height: 1.4; display: none; max-width: 300px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.attr { position: absolute; right: 6px; bottom: 4px; font-size: 11px; color: var(--muted); background: color-mix(in srgb, var(--panel) 80%, transparent); padding: 0 4px; border-radius: 3px; }
+.scale { position: absolute; left: 12px; bottom: 12px; font: 500 12px var(--f-num); color: var(--fg); }
+.scale div { height: 6px; border: 2px solid var(--fg); border-top: 0; }
+aside { background: var(--panel); border-left: 1px solid var(--line); overflow: auto; padding: 14px 16px 24px; }
+h1 { font: 700 19px/1.3 var(--f-head); margin: 0 0 4px; }
+h2 { font: 700 15px var(--f-head); margin: 16px 0 6px; }
+.sub { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+.note { font-size: 12.5px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 8px; margin: 8px 0; }
+.kpi { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.kpi div { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.kpi b { display: block; font: 600 20px var(--f-num); }
+.kpi span { font-size: 12.5px; color: var(--muted); }
+.lg { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+label.row { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 3px 0; }
+.calc { display: grid; grid-template-columns: 1fr 90px; gap: 6px 8px; align-items: center; font-size: 14px; }
+.calc input { width: 100%; font: 500 14px var(--f-num); padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 3px 5px; border-bottom: 1px solid var(--line); text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--muted); }
+td.n { font-family: var(--f-num); }
+tr.click { cursor: pointer; }
+tr.click:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.list { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+@media (max-width: 820px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 62vh auto; height: auto; }
+  aside { border-left: 0; border-top: 1px solid var(--line); overflow: visible; padding: 14px 16px 32px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <canvas id="c" aria-label="แผนที่แนวทางหลวง 222 ตามแบบกรมทางหลวง และตำแหน่งเสาไฟฟ้า"></canvas>
+    <div class="tools">
+      <button id="bAll">ทั้งโครงการ</button>
+      <button id="bSite">หน้างานสะพาน กม.6+085</button>
+      <select id="kmSel" aria-label="ไปที่ กม."></select>
+      <button id="bSat" aria-pressed="false">ภาพดาวเทียม</button>
+      <a href="index.html">โมเดล 3D สะพาน</a>
+    </div>
+    <div id="tip"></div>
+    <div class="scale" id="scale"><span></span><div></div></div>
+    <div class="attr" id="attr"></div>
+  </div>
+  <aside>
+    <h1>แนวทาง ทล.222 ตามแบบ ทล. และเสาไฟฟ้า</h1>
+    <p class="sub">ทางหลวงหมายเลข 222 สายพังโคน - บึงกาฬ ตอน อ.พังโคน - อ.วานรนิวาส ใช้วางแผนย้ายแนวเสาตลอดโครงการ</p>
+    <div class="kpi" id="kpi"></div>
+    <h2>เกณฑ์ (ปรับได้)</h2>
+    <div class="calc">
+      <label for="mg">ระยะเผื่อจากขอบงานทาง (ม.) ค่าสมมติ</label><input id="mg" type="number" step="0.1" value="1.5">
+      <label for="rt">ระยะยอมเกินแนว R.O.W. (ม.)</label><input id="rt" type="number" step="0.1" value="0">
+    </div>
+    <p class="note"><span class="lg" style="background:var(--bad)"></span>อยู่ในแนวงานทาง (ห่าง CL ไม่เกินเส้นนอกสุดของแบบ) ·
+      <span class="lg" style="background:var(--warn)"></span>ห่างขอบงานทางไม่เกินระยะเผื่อ ·
+      <span class="lg" style="background:var(--ok)"></span>พ้นแนวงานทาง · <span class="lg" style="background:#8a8f8c"></span>ไม่มีแบบตรงนั้น ·
+      วงแหวนน้ำเงิน = อยู่นอกแนว R.O.W. เดิม</p>
+    <h2>ชั้นข้อมูล</h2>
+    <div id="layers"></div>
+    <h2>สรุปรายกิโลเมตร</h2>
+    <div class="list"><table id="kmT"></table></div>
+    <h2>เสาที่ต้องตรวจ (คลิกเพื่อซูม)</h2>
+    <div class="list"><table id="pT"></table></div>
+    <p style="margin:10px 0"><button id="bCsv">ดาวน์โหลดตารางเสา (CSV)</button></p>
+    <p class="note" id="src"></p>
+    <p class="note">วิธีคิด: แนว CL ออกแบบ = กึ่งกลางเส้นคู่ยาว 21.5 กม. ในชั้น Design ระยะ กม. เทียบกับป้าย กม. ในแบบ (ต่างจากป้ายกลาง <span id="cal"></span> ม.) ระยะของเสาวัดตั้งฉากจาก CL (บวก = ขวาทาง RT.) ขอบงานทาง = เส้นนอกสุดของชั้น Design ด้านเดียวกับเสา (ตีความจากแบบ ยังไม่รวมลาดคันทาง/คูน้ำ ต้องยืนยันกับ ทล.) R.O.W. = แนวเขตทางเดิมในงานสำรวจ บริเวณสะพาน กม.6+085 มีเพียงแนว CL และ R.O.W. แบบถนนช่วงนั้นดูในโมเดล 3D</p>
+  </aside>
+</div>
+<script src="assets/route_data.js"></script>
+<script>
+(function () {
+  const R = window.ROUTE, S = R.scale;
+  const dec = a => { const o = new Float64Array(a.length); for (let i = 0; i < a.length; i++) o[i] = a[i] * S; return o; };
+  const L = {}; for (const k in R.layers) L[k] = R.layers[k].map(dec);
+  const CL = dec(R.cl);
+  const site = [R.site[0] * S, R.site[1] * S];
+  const poles = R.poles.map((p, i) => ({ i: i + 1, x: p[0] * S, y: p[1] * S, sta: p[2], off: p[3], edge: p[4], row: p[5] }));
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const fmtSta = s => `${Math.floor(s / 1000)}+${String(Math.round(s % 1000)).padStart(3, '0')}`;
+  const f1 = v => v == null || isNaN(v) ? '-' : v.toFixed(1), f2 = v => v == null || isNaN(v) ? '-' : v.toFixed(2);
+
+  // ---------- project TM (CM 103°51', k 1.0000213946, FE 100,000) <-> WGS84 (Snyder 1987) ----------
+  const a = 6378137, f = 1 / 298.257223563, e2 = f * (2 - f), ep2 = e2 / (1 - e2), k0 = 1.0000213946, lon0 = 103.85 * Math.PI / 180, FE = 100000;
+  const Mf = p => a * ((1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 ** 3 / 256) * p - (3 * e2 / 8 + 3 * e2 * e2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * p) + (15 * e2 * e2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * p) - (35 * e2 ** 3 / 3072) * Math.sin(6 * p));
+  function fwd(lat, lon) { const p = lat * Math.PI / 180, N = a / Math.sqrt(1 - e2 * Math.sin(p) ** 2), T = Math.tan(p) ** 2, C = ep2 * Math.cos(p) ** 2, A = (lon * Math.PI / 180 - lon0) * Math.cos(p);
+    return [FE + k0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T * T + 72 * C - 58 * ep2) * A ** 5 / 120) - R.E0,
+      k0 * (Mf(p) + N * Math.tan(p) * (A * A / 2 + (5 - T + 9 * C + 4 * C * C) * A ** 4 / 24 + (61 - 58 * T + T * T + 600 * C - 330 * ep2) * A ** 6 / 720)) - R.N0]; }
+  function inv(x, y) { x += R.E0; y += R.N0; const M = y / k0, mu = M / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 ** 3 / 256)), e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+    const p1 = mu + (3 * e1 / 2 - 27 * e1 ** 3 / 32) * Math.sin(2 * mu) + (21 * e1 * e1 / 16 - 55 * e1 ** 4 / 32) * Math.sin(4 * mu) + (151 * e1 ** 3 / 96) * Math.sin(6 * mu) + (1097 * e1 ** 4 / 512) * Math.sin(8 * mu);
+    const C1 = ep2 * Math.cos(p1) ** 2, T1 = Math.tan(p1) ** 2, N1 = a / Math.sqrt(1 - e2 * Math.sin(p1) ** 2), R1 = a * (1 - e2) / (1 - e2 * Math.sin(p1) ** 2) ** 1.5, D = (x - FE) / (N1 * k0);
+    const lat = p1 - (N1 * Math.tan(p1) / R1) * (D * D / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * ep2) * D ** 4 / 24 + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * ep2 - 3 * C1 * C1) * D ** 6 / 720);
+    const lon = lon0 + (D - (1 + 2 * T1 + C1) * D ** 3 / 6 + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * ep2 + 24 * T1 * T1) * D ** 5 / 120) / Math.cos(p1);
+    return [lat * 180 / Math.PI, lon * 180 / Math.PI]; }
+
+  // ---------- view ----------
+  const cv = document.getElementById('c'), g = cv.getContext('2d'), tip = document.getElementById('tip');
+  let W = 1, H = 1, dpr = 1, V = { cx: site[0], cy: site[1], s: 1 };   // s = pixels per metre
+  const sx = x => (x - V.cx) * V.s + W / 2, sy = y => H / 2 - (y - V.cy) * V.s;
+  const wx = px => (px - W / 2) / V.s + V.cx, wy = py => V.cy - (py - H / 2) / V.s;
+  function fit(x0, y0, x1, y1) { V.cx = (x0 + x1) / 2; V.cy = (y0 + y1) / 2; V.s = Math.min(W / Math.max(x1 - x0, 1), H / Math.max(y1 - y0, 1)) * 0.9; draw(); }
+  function fitAll() { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (let i = 0; i < CL.length; i += 2) { x0 = Math.min(x0, CL[i]); x1 = Math.max(x1, CL[i]); y0 = Math.min(y0, CL[i + 1]); y1 = Math.max(y1, CL[i + 1]); } fit(x0, y0, x1, y1); }
+  const goTo = (x, y, half = 120) => fit(x - half, y - half, x + half, y + half);
+
+  const STY = {
+    sat: { n: 'ภาพดาวเทียม (Esri World Imagery)', on: false },
+    exroad: { n: 'ถนนเดิม (ผิวทาง)', c: '#9a8f7a', w: 1, on: true }, excl: { n: 'แนวศูนย์กลางถนนเดิม', c: '#8a8f8c', w: 1, d: [6, 4], on: false },
+    water: { n: 'ลำน้ำ/คูน้ำ', c: '#4f87b0', w: 1.4, on: true }, bridge: { n: 'สะพานเดิม', c: '#3b3f3d', w: 1.4, on: true },
+    bldg: { n: 'อาคาร', c: '#b07a4f', w: 1, on: true }, fence: { n: 'รั้ว', c: '#a3a8a5', w: 0.8, on: false }, drain: { n: 'ท่อระบายน้ำ', c: '#4c9a9a', w: 1, on: false },
+    design: { n: 'แบบถนนใหม่ (ชั้น Design)', c: '#5b2a86', w: 1.2, on: true }, edge: { n: 'ขอบผิวทาง/เส้นจราจรใหม่', c: '#7d6aa0', w: 0.8, on: true },
+    lane: { n: 'เส้นแบ่งช่องจราจร/CL ย่อย', c: '#9c8fb5', w: 0.7, on: false }, row: { n: 'แนวเขตทางเดิม (R.O.W.)', c: '#2f6fd0', w: 2, d: [8, 5], on: true },
+    recheck: { n: 'กรอบ Recheck ในแบบ', c: '#d07a1a', w: 1, on: false },
+    cl: { n: 'แนว CL ออกแบบ + กม.', c: '#c0262d', w: 1, on: true }, poles: { n: 'เสาไฟฟ้าที่สำรวจ (1,086 ต้น)', on: true },
+  };
+  const ORDER = ['exroad', 'excl', 'water', 'bridge', 'bldg', 'fence', 'drain', 'design', 'edge', 'lane', 'recheck', 'row'];
+  document.getElementById('layers').innerHTML = Object.entries(STY).map(([k, s]) => `<label class="row"><input type="checkbox" data-l="${k}" ${s.on ? 'checked' : ''}>${s.c ? `<span class="lg" style="border-radius:2px;height:4px;background:${s.c}"></span>` : ''}${s.n}</label>`).join('');
+  document.querySelectorAll('#layers input').forEach(i => i.addEventListener('change', () => { STY[i.dataset.l].on = i.checked; if (i.dataset.l === 'sat') document.getElementById('bSat').setAttribute('aria-pressed', String(i.checked)); draw(); }));
+
+  // ---------- classification ----------
+  let MG = 1.5, RT = 0;
+  const cls = p => p.edge == null ? 'none' : Math.abs(p.off) <= p.edge ? 'bad' : Math.abs(p.off) <= p.edge + MG ? 'warn' : 'ok';
+  const outRow = p => p.row != null && Math.abs(p.off) > p.row + RT;
+  const COL = () => ({ bad: css('--bad'), warn: css('--warn'), ok: css('--ok'), none: '#8a8f8c' });
+
+  // ---------- satellite tiles ----------
+  const TILE = {};
+  function tileImg(z, x, y) { const k = `${z}/${x}/${y}`; if (TILE[k]) return TILE[k]; const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => draw(); im.onerror = () => { im.failed = true; };
+    im.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`; return (TILE[k] = im); }
+  const t2lon = (x, z) => x / 2 ** z * 360 - 180, t2lat = (y, z) => { const n = Math.PI - 2 * Math.PI * y / 2 ** z; return 180 / Math.PI * Math.atan(Math.sinh(n)); };
+  function drawSat() {
+    const mpp = 1 / V.s, z = Math.max(10, Math.min(19, Math.round(Math.log2(156543 * Math.cos(17.5 * Math.PI / 180) / mpp))));
+    const c = [[0, 0], [W, 0], [0, H], [W, H]].map(([px, py]) => inv(wx(px), wy(py)));
+    const lats = c.map(q => q[0]), lons = c.map(q => q[1]), n = 2 ** z;
+    const x0 = Math.floor((Math.min(...lons) + 180) / 360 * n), x1 = Math.floor((Math.max(...lons) + 180) / 360 * n);
+    const ty = la => Math.floor((1 - Math.log(Math.tan(la * Math.PI / 180) + 1 / Math.cos(la * Math.PI / 180)) / Math.PI) / 2 * n);
+    const y0 = ty(Math.max(...lats)), y1 = ty(Math.min(...lats));
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) > 120) return;
+    let any = false;
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) {
+      const im = tileImg(z, x, y); if (!im.complete || im.failed || !im.naturalWidth) continue; any = true;
+      const p0 = fwd(t2lat(y, z), t2lon(x, z)), p1 = fwd(t2lat(y, z), t2lon(x + 1, z)), p2 = fwd(t2lat(y + 1, z), t2lon(x, z));
+      const A = [sx(p0[0]), sy(p0[1])], B = [sx(p1[0]), sy(p1[1])], C = [sx(p2[0]), sy(p2[1])];
+      g.setTransform(dpr * (B[0] - A[0]) / 256, dpr * (B[1] - A[1]) / 256, dpr * (C[0] - A[0]) / 256, dpr * (C[1] - A[1]) / 256, dpr * A[0], dpr * A[1]);
+      g.drawImage(im, 0, 0, 256.6, 256.6);
+    }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    document.getElementById('attr').textContent = any ? 'Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community' : 'โหลดภาพดาวเทียมไม่ได้';
+  }
+
+  function poly(a, sty) {
+    g.beginPath();
+    for (let i = 0; i < a.length; i += 2) { const X = sx(a[i]), Y = sy(a[i + 1]); i ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+    g.stroke();
+  }
+  function draw() {
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = css('--map'); g.fillRect(0, 0, W, H);
+    document.getElementById('attr').textContent = '';
+    if (STY.sat.on) drawSat();
+    const vx0 = wx(-50), vx1 = wx(W + 50), vy0 = wy(H + 50), vy1 = wy(-50);
+    const vis = a => { let mnx = Infinity, mxx = -Infinity, mny = Infinity, mxy = -Infinity; for (let i = 0; i < a.length; i += 2) { mnx = Math.min(mnx, a[i]); mxx = Math.max(mxx, a[i]); mny = Math.min(mny, a[i + 1]); mxy = Math.max(mxy, a[i + 1]); } return mxx >= vx0 && mnx <= vx1 && mxy >= vy0 && mny <= vy1; };
+    const sat = STY.sat.on;
+    for (const k of ORDER) { const s = STY[k]; if (!s.on) continue; g.strokeStyle = sat && k === 'design' ? '#e7c8ff' : sat && k === 'row' ? '#7fb2ff' : s.c; g.lineWidth = s.w * (V.s > 2 ? 1.4 : 1); g.setLineDash(s.d || []);
+      for (const a of L[k]) if (vis(a)) poly(a); }
+    g.setLineDash([]);
+    if (STY.cl.on) { g.strokeStyle = STY.cl.c; g.lineWidth = 1; g.setLineDash([10, 4, 2, 4]); poly(CL); g.setLineDash([]);
+      g.font = '600 12px Sarabun, sans-serif'; g.fillStyle = sat ? '#fff' : css('--fg'); g.textBaseline = 'middle';
+      const every = V.s > 0.25 ? 500 : V.s > 0.06 ? 1000 : 5000;
+      for (const [x, y, km, ang] of R.kms) { if (km % every) continue; const X = sx(x * S), Y = sy(y * S); if (X < -40 || X > W + 40 || Y < -20 || Y > H + 20) continue;
+        const nx = Math.sin(ang), ny = Math.cos(ang); g.strokeStyle = STY.cl.c; g.lineWidth = 2; g.beginPath(); g.moveTo(X - nx * 8, Y - ny * 8); g.lineTo(X + nx * 8, Y + ny * 8); g.stroke();
+        g.fillText('กม.' + fmtSta(km), X + nx * 12 + 2, Y + ny * 12); } }
+    // labels when close
+    if (V.s > 0.8) { g.font = '500 11px Sarabun, sans-serif'; g.fillStyle = sat ? '#fff' : css('--muted');
+      for (const [x, y, t] of R.labels) { const X = sx(x * S), Y = sy(y * S); if (X > -100 && X < W + 100 && Y > -20 && Y < H + 20) g.fillText(t, X, Y); } }
+    // site
+    { const X = sx(site[0]), Y = sy(site[1]); g.fillStyle = css('--accent'); g.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 5 : 11, t = -Math.PI / 2 + i * Math.PI / 5; g.lineTo(X + r * Math.cos(t), Y + r * Math.sin(t)); } g.fill();
+      g.font = '700 13px Sarabun, sans-serif'; g.fillStyle = sat ? '#fff' : css('--accent'); g.fillText('สะพาน กม.6+085 (งานรื้อย้ายปัจจุบัน)', X + 14, Y); }
+    if (STY.poles.on) { const C = COL(), r = Math.max(3, Math.min(7, 0.6 * V.s));
+      for (const p of poles) { const X = sx(p.x), Y = sy(p.y); if (X < -10 || X > W + 10 || Y < -10 || Y > H + 10) continue;
+        g.fillStyle = C[cls(p)]; g.beginPath(); g.arc(X, Y, r, 0, 7); g.fill(); g.lineWidth = 1; g.strokeStyle = sat ? '#fff' : 'rgba(0,0,0,.45)'; g.stroke();
+        if (outRow(p)) { g.strokeStyle = '#2f6fd0'; g.lineWidth = 1.6; g.beginPath(); g.arc(X, Y, r + 3, 0, 7); g.stroke(); }
+        if (V.s > 3) { g.font = '600 11px IBM Plex Mono, monospace'; g.fillStyle = sat ? '#fff' : css('--fg'); g.fillText('P' + p.i, X + r + 4, Y - 6); } } }
+    // scale bar
+    const target = 110 / V.s, pw = 10 ** Math.floor(Math.log10(target)), m = [1, 2, 5, 10].map(k => k * pw).filter(v => v <= target).pop() || pw;
+    const sc = document.getElementById('scale'); sc.querySelector('span').textContent = m >= 1000 ? `${m / 1000} กม.` : `${m} ม.`; sc.querySelector('div').style.width = (m * V.s) + 'px';
+  }
+
+  // ---------- interaction ----------
+  let drag = null; const ptrs = new Map();
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.offsetX, e.offsetY]); drag = { x: e.offsetX, y: e.offsetY, cx: V.cx, cy: V.cy, moved: false }; cv.style.cursor = 'grabbing'; });
+  cv.addEventListener('pointermove', e => {
+    if (ptrs.has(e.pointerId)) { const prev = ptrs.get(e.pointerId); ptrs.set(e.pointerId, [e.offsetX, e.offsetY]);
+      if (ptrs.size === 2) { const [p, q] = [...ptrs.values()]; const d1 = Math.hypot(p[0] - q[0], p[1] - q[1]); const other = [...ptrs.entries()].find(([k]) => k !== e.pointerId)[1];
+        const d0 = Math.hypot(prev[0] - other[0], prev[1] - other[1]); if (d0 > 0) zoomAt((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, d1 / d0); drag = null; return; }
+      if (drag) { const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true; V.cx = drag.cx - dx / V.s; V.cy = drag.cy + dy / V.s; draw(); } return; }
+    hover(e.offsetX, e.offsetY);
+  });
+  const up = e => { ptrs.delete(e.pointerId); if (drag && !drag.moved) { const p = pick(e.offsetX, e.offsetY); if (p) goTo(p.x, p.y, 40); } drag = null; cv.style.cursor = 'grab'; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  function zoomAt(px, py, k) { const x = wx(px), y = wy(py); V.s = Math.max(0.005, Math.min(40, V.s * k)); V.cx = x - (px - W / 2) / V.s; V.cy = y + (py - H / 2) / V.s; draw(); }
+  cv.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+  function pick(px, py) { let best = null, bd = 12; for (const p of poles) { const d = Math.hypot(sx(p.x) - px, sy(p.y) - py); if (d < bd) { bd = d; best = p; } } return best; }
+  const CN = { bad: 'อยู่ในแนวงานทาง', warn: 'ใกล้ขอบงานทาง', ok: 'พ้นแนวงานทาง', none: 'ไม่มีแบบตรงนั้น' };
+  const desc = p => `<b>P${p.i}</b> กม.${fmtSta(p.sta)} ${p.off >= 0 ? 'RT.' : 'LT.'}<br>ห่าง CL ${f2(Math.abs(p.off))} ม. · ขอบงานทาง ${f2(p.edge)} ม. · R.O.W. ${f2(p.row)} ม.<br>${CN[cls(p)]}${outRow(p) ? ' · นอก R.O.W.' : ''}`;
+  function hover(px, py) { const p = pick(px, py); if (!p) { tip.style.display = 'none'; return; } tip.innerHTML = desc(p); tip.style.display = 'block';
+    tip.style.left = Math.min(px + 14, W - 300) + 'px'; tip.style.top = Math.max(py - 10, 50) + 'px'; }
+
+  // ---------- panel ----------
+  function panel() {
+    const C = COL(), n = { bad: 0, warn: 0, ok: 0, none: 0 }; let nr = 0;
+    for (const p of poles) { n[cls(p)]++; if (outRow(p)) nr++; }
+    document.getElementById('kpi').innerHTML = [[n.bad, 'อยู่ในแนวงานทาง', C.bad], [n.warn, `ห่างขอบงานทาง ≤ ${MG} ม.`, C.warn], [n.ok, 'พ้นแนวงานทาง', C.ok], [nr, 'อยู่นอก R.O.W. เดิม', '#2f6fd0']]
+      .map(([v, t, c]) => `<div><b style="color:${c}">${v.toLocaleString('th-TH')}</b><span>${t}</span></div>`).join('');
+    const km = {}; for (const p of poles) { const k = Math.floor(p.sta / 1000); const o = km[k] ||= { t: 0, bad: 0, warn: 0, row: 0, s: p }; o.t++; if (cls(p) === 'bad') o.bad++; if (cls(p) === 'warn') o.warn++; if (outRow(p)) o.row++; }
+    document.getElementById('kmT').innerHTML = '<tr><th>ช่วง กม.</th><th>เสา</th><th>ในแนว</th><th>ใกล้</th><th>นอก R.O.W.</th></tr>' +
+      Object.entries(km).map(([k, o]) => `<tr class="click" data-x="${o.s.x}" data-y="${o.s.y}"><td>${k}+000 – ${+k + 1}+000</td><td class="n">${o.t}</td><td class="n" style="color:${o.bad ? C.bad : ''}">${o.bad}</td><td class="n" style="color:${o.warn ? C.warn : ''}">${o.warn}</td><td class="n">${o.row}</td></tr>`).join('');
+    const bad = poles.filter(p => cls(p) === 'bad' || cls(p) === 'warn');
+    document.getElementById('pT').innerHTML = '<tr><th>เสา</th><th>กม.</th><th>ฝั่ง</th><th>ห่าง CL</th><th>ขอบงาน</th></tr>' +
+      bad.map(p => `<tr class="click" data-x="${p.x}" data-y="${p.y}" data-z="40"><td><span class="lg" style="background:${C[cls(p)]}"></span>P${p.i}</td><td class="n">${fmtSta(p.sta)}</td><td>${p.off >= 0 ? 'RT.' : 'LT.'}</td><td class="n">${f2(Math.abs(p.off))}</td><td class="n">${f2(p.edge)}</td></tr>`).join('');
+    document.querySelectorAll('tr.click').forEach(tr => tr.onclick = () => goTo(+tr.dataset.x, +tr.dataset.y, +(tr.dataset.z || 400)));
+  }
+  document.getElementById('mg').addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { MG = v; panel(); draw(); } });
+  document.getElementById('rt').addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { RT = v; panel(); draw(); } });
+  document.getElementById('bAll').onclick = fitAll;
+  document.getElementById('bSite').onclick = () => goTo(site[0], site[1], 220);
+  document.getElementById('bSat').onclick = e => { STY.sat.on = !STY.sat.on; e.currentTarget.setAttribute('aria-pressed', String(STY.sat.on)); document.querySelector('[data-l="sat"]').checked = STY.sat.on; draw(); };
+  const ks = document.getElementById('kmSel'); ks.innerHTML = '<option value="">ไปที่ กม. ...</option>' + R.kms.filter(k => k[2] % 1000 === 0).map(k => `<option value="${k[2]}">กม.${fmtSta(k[2])}</option>`).join('');
+  ks.onchange = () => { const k = R.kms.find(q => q[2] === +ks.value); if (k) goTo(k[0] * S, k[1] * S, 300); ks.value = ''; };
+  document.getElementById('bCsv').onclick = () => {
+    const rows = [['เสา', 'กม.', 'ฝั่ง', 'ห่าง CL (ม.)', 'ขอบงานทาง (ม.)', 'R.O.W. (ม.)', 'ผล', 'นอก R.O.W.', 'E', 'N', 'lat', 'lon']];
+    for (const p of poles) { const [la, lo] = inv(p.x, p.y); rows.push(['P' + p.i, fmtSta(p.sta), p.off >= 0 ? 'RT' : 'LT', Math.abs(p.off).toFixed(2), f2(p.edge), f2(p.row), CN[cls(p)], outRow(p) ? 'ใช่' : '', (p.x + R.E0).toFixed(3), (p.y + R.N0).toFixed(3), la.toFixed(7), lo.toFixed(7)]); }
+    const b = new Blob(['﻿' + rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }), u = URL.createObjectURL(b), aa = document.createElement('a'); aa.href = u; aa.download = 'tl222_poles.csv'; aa.click(); setTimeout(() => URL.revokeObjectURL(u), 1000);
+  };
+  document.getElementById('src').textContent = 'ที่มา: ' + R.src + ' ระบบพิกัด TM ของงาน (CM 103°51′, FE 100,000, k 1.0000213946)';
+  document.getElementById('cal').textContent = R.calRes[0];
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { panel(); draw(); });
+  function resize() { const r = cv.getBoundingClientRect(); dpr = Math.min(devicePixelRatio || 1, 2); W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; draw(); }
+  new ResizeObserver(resize).observe(cv); resize();
+  panel();
+  const h = location.hash.match(/^#km(\d+)$/);
+  if (location.hash === '#site') goTo(site[0], site[1], 220); else if (h) { const k = R.kms.find(q => q[2] === +h[1] * 1000); k ? goTo(k[0] * S, k[1] * S, 300) : fitAll(); } else fitAll();
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>
