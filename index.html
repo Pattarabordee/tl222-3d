@@ -109,6 +109,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="v3d">มุม 3D</button>
       <button id="vtop">มุมบน</button>
       <button id="vsat">ดาวเทียม</button>
+      <button id="vroute">ทั้งแนวถนน</button>
+      <select id="kmGo" aria-label="ไปที่ กม." hidden></select>
       <button id="lblOn" aria-pressed="true" title="เปิด/ปิดป้ายชื่อในโมเดล">ป้ายชื่อ</button>
       <button id="vroad">มองตามถนน</button>
       <button id="vside">มองข้ามห้วย</button>
@@ -292,8 +294,10 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <div><span style="background:#6b4a1d"></span>สาย 22 kV ACSR</div>
         <div><span style="background:#2b2b2b"></span>สาย 22 kV 120 SAC</div>
         <div><span style="background:#1f9a55"></span>งานใหม่ / ย้ายแล้ว</div>
-        <div><span style="background:#2f6fd0"></span>R.O.W. (ค่าสมมติ)</div>
+        <div><span style="background:#2f6fd0"></span>R.O.W. เดิม 30 ม. (DWG สำรวจ ทล.)</div>
         <div><span style="background:#d07a1a"></span>L.O.W. (ค่าสมมติ)</div>
+        <label><input type="checkbox" id="routeOn"> <span style="background:#5b2a86"></span>แนวถนนทั้งโครงการ กม.4+800–25+800 (DWG ทล.) และเสาไฟฟ้าที่ ทล. สำรวจ</label>
+        <p class="assume" id="routeNote" hidden></p>
         <label><input type="checkbox" id="satOn"> <span style="background:linear-gradient(90deg,#4d5b3a,#8a8f7a,#5d6b55)"></span>ภาพดาวเทียม (Esri World Imagery)</label>
         <p class="assume" id="satNote" hidden></p>
         <label><input type="checkbox" id="demOn"> <span style="background:linear-gradient(90deg,#a7c98a,#ece0ae,#cfa784)"></span>ภูมิประเทศ Copernicus DEM 30 ม. (เส้นชั้นความสูง 1 ม.)</label>
@@ -323,6 +327,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="assets/pea_parts.js"></script>
 <script src="assets/doh_bridge.js"></script>
+<script src="assets/route_data.js"></script>
 <script>
 (async function () {
   try { await document.fonts.load('600 40px "Sarabun"'); } catch (e) {}
@@ -1156,7 +1161,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
         `<div>ช่วงสาย TAC จากเสาถึงจุดยึดแรก (2 ช่วงรวม) ${sd.map(r => `${r.s} ${fmt(r.route[0] - r.nSeg * r.sp)} ม.`).join(', ')} · ระยะสายถึงพื้นต่ำสุดในช่วงนี้ ${sd.map(r => `${r.s} ${f2(r.gnd ?? NaN)} ม.` + (r.road != null ? ` เหนือถนน ${f2(r.road)} ม. ${ok(r.road >= 5.1)} (TAC เหนือถนน 5.10 ม.)` : '')).join(', ')}</div>` +
         `<div>ยอดเสา 2314A ถึงสาย 115 kV ต่ำสุด ${f2(Math.min(...pol.map(p => p.hv)))} ม. (อ้างอิงระยะวงจร 115/22 kV 2.40 ม.) ${ok(Math.min(...pol.map(p => p.hv)) >= 2.4)}</div>` +
         `<div class="st-bad">ไม่แก้ปัญหา 115 kV: เสา 115 kV หัวสะพานฝั่งใต้ยังอยู่ในแผ่นพื้นทางเข้า และสาย 115 kV ยังพาดเหนือพื้นสะพาน LT. (${fmt(S.span115[1].c.vDeck)} ม.) ต้องใช้ทางเลือกย้ายเสา 115 kV ร่วมด้วย</div>` +
-        `<div style="color:var(--warn)">ต้องได้: หนังสืออนุญาตจาก ศูนย์สร้างและบูรณะสะพานที่ 2 (หนังสือ 06), รายการคำนวณของผู้รับจ้าง (2326 ข้อ 10), แบบคาน/ราวสะพานจริง, ขนาดสาย TAC (≤ 240 ตร.มม.) ถ้า ทล. ไม่อนุญาตต้องใช้วิธีอื่น (9508)</div>`;
+        `<div style="color:var(--warn)">ต้องได้: หนังสืออนุญาตจาก แขวงทางหลวงสกลนครที่ 2 (หนังสือ 06), รายการคำนวณของผู้รับจ้าง (2326 ข้อ 10), แบบคาน/ราวสะพานจริง, ขนาดสาย TAC (≤ 240 ตร.มม.) ถ้า ทล. ไม่อนุญาตต้องใช้วิธีอื่น (9508)</div>`;
     } else if (P.mode === 5) {
       const ar = S.ar, bad = ar.ph.filter(p => !(!p.c.over && p.c.h >= 1.8));
       el.innerHTML = `<div class="big ${ar.clear === 3 && ar.sep >= ar.sepMin ? 'st-ok' : 'st-warn'}">จัดเฟส ACSR ใหม่: พ้นแนวสะพาน ${ar.clear} จาก 3 เฟส</div>` +
@@ -1194,6 +1199,81 @@ table.ph th { color: var(--muted); font-weight: 600; }
   // ---------- PEA GIS overlay (read 14 Nov 2026): x along road from km 6+085, z across (+RT), m; height m ----------
   const GIS_POLES = [[-111.3, -13.4, 22, "HV", "SS-SA-2"], [-103.6, 17.9, 16, "MV", "Tower"], [-103.5, 14.0, 16, "MV", "Tower"], [-75.1, -14.2, 22, "HV", "ทางตรง"], [-72.8, -14.3, 22, "HV", "ทางตรง"], [86.7, -12.2, 22, "HV", "ทางตรง"], [88.3, -12.0, 22, "HV", "ทางตรง"], [105.9, 31.0, 12, "MV", "DDE"], [107.0, 15.8, 12, "MV", "DE"], [117.2, 17.1, 16, "MV", "Tower"], [117.3, 14.6, 16, "MV", "Tower"], [129.6, -11.4, 22, "HV", "SS-SA-2"]];
   const GIS_LINES = [["115", "3-400A", [-130, -8.4], [-105.5, -9.3]], ["115", "3-400A", [-105.5, -9.3], [-69.2, -10.0]], ["115", "3-400A", [-69.2, -10.0], [92.5, -8.1]], ["115", "3-400A", [92.5, -8.1], [130, -7.4]], ["22", "3-50ACSR", [111.6, 7.0], [116.7, 6.1]], ["22", "3-50ACSR", [116.7, 6.1], [130, 6.5]], ["22", "3-185PIC", [88.3, -8.0], [129.4, -7.4]], ["22", "3-185PIC", [-75.3, -10.2], [-111.1, -9.4]], ["22", "3-185PIC", [-111.1, -9.4], [-130, -8.7]], ["22", "3-185A", [88.3, -8.0], [-75.3, -10.2]], ["22", "3-120A", [-130, 10.1], [-103.8, 8.1]], ["22", "3-120A", [-103.8, 8.1], [106.9, 9.9]], ["22", "3-120A", [106.9, 9.9], [117.9, 8.3]], ["22", "3-120A", [117.9, 8.3], [130, 8.6]], ["22", "3-120A", [118.2, 10.1], [130, 10.5]], ["22", "3-50ACSR", [111.6, 7.0], [111.7, 10.0]], ["22", "3-50ACSR", [111.7, 10.0], [110.1, 27.3]], ["22", "3-50ACSR", [110.1, 27.3], [109.8, 31.5]], ["22", "3-120A", [-130, 12.1], [-103.7, 10.1]], ["22", "3-120A", [-103.7, 10.1], [107.3, 11.8]], ["22", "3-120A", [107.3, 11.8], [118.2, 10.1]], ["22", "3-185PIC", [129.4, -7.4], [130, -7.4]]];
+
+  // ================= whole road: DOH survey/design DWG (assets/route_data.js, tools/route_build.py) =================
+  // TM grid -> model axes: origin = design CL at km 6+085, along = bridge axis Grid AZ 354°46'50" (x + north), z + east
+  const routeG = new THREE.Group(); scene.add(routeG); routeG.visible = false;
+  const FOG = scene.fog;
+  const RTE = (() => {
+    const R = window.ROUTE; if (!R) return null;
+    const S = R.scale, cl = R.cl.map(v => v * S);
+    let acc = 0, O = null; const s0 = 6085 - R.c0;
+    for (let i = 2; i < cl.length; i += 2) { const d = Math.hypot(cl[i] - cl[i - 2], cl[i + 1] - cl[i - 1]);
+      if (acc + d >= s0) { const t = (s0 - acc) / d; O = [cl[i - 2] + (cl[i] - cl[i - 2]) * t, cl[i - 1] + (cl[i + 1] - cl[i - 1]) * t]; break; } acc += d; }
+    const A = (354 + 46 / 60 + 50 / 3600) * Math.PI / 180, ux = Math.sin(A), uy = Math.cos(A);
+    const toM = (e, n) => { const dx = e - R.E0 - O[0], dy = n - R.N0 - O[1]; return [dx * ux + dy * uy, dx * uy - dy * ux]; };   // [x along, z east]
+    return { R, S, toM };
+  })();
+  const routeY = (x, z) => (Math.abs(x) < 280 && Math.abs(z) < 190 ? gy(x, z) : P.g0 - 100) + 0.12;
+  let routeInst = null, routePts = null;
+  const RCOL = { bad: new THREE.Color(0xc0262d), warn: new THREE.Color(0xe5934d), ok: new THREE.Color(0x1f9a55), none: new THREE.Color(0x8a8f8c) };
+  const rCls = p => p.edge == null ? 'none' : Math.abs(p.off) <= p.edge ? 'bad' : Math.abs(p.off) <= p.edge + P.low ? 'warn' : 'ok';
+  function buildRoute() {
+    routeG.clear(); if (!RTE) return;
+    const { R, S, toM } = RTE;
+    const LCOL = { design: 0x5b2a86, edge: 0x7d6aa0, row: 0x2f6fd0, exroad: 0x8c826e, bridge: 0x3b3f3d, water: 0x4f87b0, bldg: 0xb07a4f };
+    for (const [k, c] of Object.entries(LCOL)) {
+      const pos = [];
+      for (const a of R.layers[k]) for (let i = 2; i < a.length; i += 2) {
+        const [x0, z0] = toM(a[i - 2] * S + R.E0, a[i - 1] * S + R.N0), [x1, z1] = toM(a[i] * S + R.E0, a[i + 1] * S + R.N0);
+        if (Math.abs(x0) < 235 && Math.abs(z0) < 60 && k !== 'row' && k !== 'design') continue;   // near the bridge the detailed model is used
+        pos.push(x0, routeY(x0, z0), z0, x1, routeY(x1, z1), z1);
+      }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      routeG.add(new THREE.LineSegments(g, k === 'row' ? new THREE.LineDashedMaterial({ color: c, dashSize: 4, gapSize: 3 }) : new THREE.LineBasicMaterial({ color: c })));
+      if (k === 'row') routeG.children[routeG.children.length - 1].computeLineDistances();
+    }
+    // design centreline + km labels
+    { const pos = []; const cl = R.cl; for (let i = 2; i < cl.length; i += 2) { const [x0, z0] = toM(cl[i - 2] * S + R.E0, cl[i - 1] * S + R.N0), [x1, z1] = toM(cl[i] * S + R.E0, cl[i + 1] * S + R.N0); pos.push(x0, routeY(x0, z0) + 0.05, z0, x1, routeY(x1, z1) + 0.05, z1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      const l = new THREE.LineSegments(g, new THREE.LineDashedMaterial({ color: 0xc0262d, dashSize: 6, gapSize: 3 })); l.computeLineDistances(); routeG.add(l); }
+    for (const [x, y, km] of R.kms) { if (km % 1000) continue; const [mx, mz] = toM(x * S + R.E0, y * S + R.N0);
+      const lb = put(routeG, `กม.${Math.floor(km / 1000)}+000`, mx, routeY(mx, mz) + 18, mz, { size: 2.4, color: '#7a1218', border: '#c0262d' });
+      lb.material.sizeAttenuation = false; lb.scale.multiplyScalar(0.02 / lb.scale.y); lb.userData.minD = 900; }
+    // ground for the whole route (outside the detailed site terrain)
+    { const xs = R.kms.map(k => toM(k[0] * S + R.E0, k[1] * S + R.N0)); const x0 = Math.min(...xs.map(q => q[0])) - 600, x1 = Math.max(...xs.map(q => q[0])) + 600, z0 = Math.min(...xs.map(q => q[1])) - 1200, z1 = Math.max(...xs.map(q => q[1])) + 1200;
+      const gm = mat.ground, y = P.g0 - 100 - 0.05;
+      for (const [a, b, c, d] of [[x0, -300, z0, z1], [300, x1, z0, z1], [-300, 300, z0, -200], [-300, 300, 200, z1]]) {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(b - a, d - c), gm); m.rotation.x = -Math.PI / 2; m.position.set((a + b) / 2, y, (c + d) / 2); routeG.add(m); } }
+    // surveyed poles: 10 m square posts (height ค่าสมมติ) + screen-size dots
+    const n = R.poles.length, H = 10, geo = new THREE.BoxGeometry(0.3, H, 0.3).translate(0, H / 2, 0);
+    routeInst = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
+    const pp = [], m4 = new THREE.Matrix4(); routePts = [];
+    R.poles.forEach((q, i) => { const [x, z] = toM(q[0] * S + R.E0, q[1] * S + R.N0), y = routeY(x, z) - 0.12;
+      const p = { i: i + 1, x, z, y, sta: q[2], off: q[3], edge: q[4], row: q[5] }; routePts.push(p);
+      m4.makeTranslation(x, y, z); routeInst.setMatrixAt(i, m4); routeInst.setColorAt(i, RCOL[rCls(p)]); pp.push(x, y + H + 0.6, z); });
+    routeG.add(routeInst);
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3));
+    pg.setAttribute('color', new THREE.Float32BufferAttribute(routePts.flatMap(p => RCOL[rCls(p)].toArray()), 3));
+    routeG.add(new THREE.Points(pg, new THREE.PointsMaterial({ size: 7, sizeAttenuation: false, vertexColors: true })));
+    const c = { bad: 0, warn: 0, ok: 0, none: 0 }; routePts.forEach(p => c[rCls(p)]++);
+    const note = document.getElementById('routeNote');
+    note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น: <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none} ` +
+      `ขอบงานทาง = เส้นนอกสุดของแบบ (ตีความ) ระดับพื้นช่วงนอกหน้างานถือว่าเรียบ (ค่าสมมติ) เสาสูง 10 ม. เป็นค่าสมมติ ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
+  }
+  function setRoute(on) {
+    routeG.visible = on; FOG.near = on ? 40000 : 450; FOG.far = on ? 80000 : 900; camera.far = on ? 60000 : 1200; camera.updateProjectionMatrix();
+    document.getElementById('routeOn').checked = on; document.getElementById('routeNote').hidden = !on; document.getElementById('kmGo').hidden = !on;
+    if (on && !routeG.children.length) buildRoute();
+  }
+  if (RTE) {
+    const kmGo = document.getElementById('kmGo');
+    kmGo.innerHTML = '<option value="">ไปที่ กม. ...</option>' + RTE.R.kms.filter(k => k[2] % 1000 === 0).map(k => `<option value="${k[2]}">กม.${Math.floor(k[2] / 1000)}+000</option>`).join('');
+    kmGo.addEventListener('change', () => { const k = RTE.R.kms.find(q => q[2] === +kmGo.value); kmGo.value = ''; if (!k) return;
+      const [x, z] = RTE.toM(k[0] * RTE.S + RTE.R.E0, k[1] * RTE.S + RTE.R.N0), y = routeY(x, z);
+      views._km = [[x - 260, y + 170, z + 230], [x + 60, y, z]]; go('_km'); });
+    document.getElementById('routeOn').addEventListener('change', e => setRoute(e.target.checked));
+  } else { document.getElementById('routeOn').disabled = true; document.getElementById('vroute').hidden = true; }
   const gisG = new THREE.Group(); scene.add(gisG); gisG.visible = false;
   function buildGIS() {
     gisG.clear();
@@ -1231,6 +1311,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     document.getElementById('secArr').style.display = P.mode === 5 ? '' : 'none'; document.getElementById('secTac').style.display = P.mode === 7 ? '' : 'none';
     for (const id of ['vdeS', 'vdeN']) document.getElementById(id).hidden = P.mode !== 4 && P.mode !== 5;
     status();
+    if (routeG.children.length) { routeG.clear(); if (routeG.visible) buildRoute(); }
     if (!document.getElementById('boqv').hidden) renderBoq();
     document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.mode === P.mode)));
   }
@@ -1253,6 +1334,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     vside: [[0, 3, 150], [0, -1, 0]],
     v22: [[-190, 24, 48], [0, 4, 8]],
     vunder: [[-36, -4, 32], [-50, -4.5, 0]],
+    vroute: [[-5200, 6800, 6200], [8200, 0, 0]],
     get vdeS() { const [x, z] = HF[0], y = gy(x, z) + num('hLow'); return [[x + 7, y + 1.2, z - 5], [x, y - 0.3, z]]; },   // lower-circuit dead-end, seen from the bridge side
     get vdeN() { const [x, z] = HF[1], y = gy(x, z) + num('hLow'); return [[x - 7, y + 1.2, z - 5], [x, y - 0.3, z]]; },
     vdet: [[P115[0][0] + 9, 19.5, P115[0][1] + 10], [P115[0][0], 16.5, P115[0][1] + 1.2]],
@@ -1265,7 +1347,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) { camera.position.set(...p); controls.target.set(...t); controls.update(); return; }
     tween = { from: camera.position.clone(), to: V(...p), tf: controls.target.clone(), tt: V(...t), k: 0 };
   }
-  for (const id of Object.keys(views)) { const b = document.getElementById(id); if (b) b.addEventListener('click', () => go(id)); }
+  for (const id of Object.keys(views)) { const b = document.getElementById(id); if (b) b.addEventListener('click', () => { if (id === 'vroute') setRoute(true); go(id); }); }
   document.getElementById('vsat').addEventListener('click', () => { const c = document.getElementById('satOn'); if (!c.checked) { c.checked = true; c.dispatchEvent(new Event('change')); } go('vtop'); });
   // ---------- zoom to a pole head: picker in the view bar, or double-click a pole ----------
   const poleSel = document.getElementById('poleSel');
@@ -1284,6 +1366,12 @@ table.ph th { color: var(--muted); font-weight: 600; }
   canvas.addEventListener('dblclick', e => {
     const r = canvas.getBoundingClientRect(); mouse.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
     ray.setFromCamera(mouse, camera);
+    if (routeG.visible && routeInst) { const h = ray.intersectObject(routeInst)[0];
+      if (h && h.instanceId != null) { const p = routePts[h.instanceId], CN = { bad: 'อยู่ในแนวงานทาง', warn: 'ใกล้ขอบงานทาง', ok: 'พ้นแนวงานทาง', none: 'ไม่มีแบบตรงนั้น' };
+        if (routeG.userData.tag) routeG.remove(routeG.userData.tag);
+        routeG.userData.tag = put(routeG, `P${p.i} กม.${Math.floor(p.sta / 1000)}+${String(Math.round(p.sta % 1000)).padStart(3, '0')} ${p.off >= 0 ? 'RT.' : 'LT.'} ห่าง CL ${f2(Math.abs(p.off))} ม. ขอบงานทาง ${f2(p.edge ?? NaN)} ม. · ${CN[rCls(p)]}`,
+          p.x, p.y + 13, p.z, rCls(p) === 'bad' ? BAD : rCls(p) === 'warn' ? WARN : NEW);
+        views._rp = [[p.x - 28, p.y + 16, p.z + 24], [p.x, p.y + 5, p.z]]; go('_rp'); return; } }
     for (const hit of ray.intersectObjects(POLES, true)) { let o = hit.object; while (o && !(o.userData && o.userData.pole)) o = o.parent;
       if (o) { zoomPole(o); poleSel.value = String(POLES.indexOf(o)); return; } }
   });
@@ -1413,9 +1501,9 @@ table.ph th { color: var(--muted); font-weight: 600; }
       camera.position.lerpVectors(tween.from, tween.to, e); controls.target.lerpVectors(tween.tf, tween.tt, e); if (tween.k >= 1) tween = null; }
     controls.update();
     { const now = performance.now(), dt = Math.min(0.05, (now - _last) / 1000); _last = now; if (WIND.on) windStep(dt); }
-    scene.traverse(o => { if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = SHOW_LBL && d > 17; } });
+    scene.traverse(o => { if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = SHOW_LBL && d > (o.userData.minD || 17); } });
     renderer.render(scene, camera); requestAnimationFrame(loop);
   })();
-  window.__ready = true; window.__S = () => S;
+  window.__ready = true; window.__S = () => S; window.__cam = camera; window.__ctl = controls; window.__scene = scene;
 })();
 </script>
