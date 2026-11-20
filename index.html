@@ -103,6 +103,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="m4" data-mode="4">5 ตัด DE วงจรล่าง H-Frame</button>
       <button id="m5" data-mode="5">6 จัดเฟส ACSR ใหม่ (เสนอ)</button>
       <button id="m6" data-mode="6">7 เครื่องเจาะเสาเข็ม</button>
+      <button id="m7" data-mode="7">8 TAC เกาะสะพานทั้งสองฝั่ง</button>
     </div>
     <div class="views" role="group" aria-label="มุมมอง">
       <button id="v3d">มุม 3D</button>
@@ -123,7 +124,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <h2 id="boqTitle">ปริมาณงาน (BOQ)</h2>
       <p class="lead">นับจากรูปทรงในโมเดลของขั้นที่เลือก รายการวัสดุย่อยคัดจากบัญชีวัสดุในแบบมาตรฐาน กฟภ. ตามเลขแบบ ราคาให้กรอกเอง เก็บไว้ในเบราว์เซอร์นี้เท่านั้น</p>
       <div class="boqbar" role="group" aria-label="ทางเลือก">
-        <button data-bm="2">3 แผนงาน 22 kV</button><button data-bm="3">4 ย้ายเสา 115 kV ฝั่งใต้</button><button data-bm="4">5 ตัด DE วงจรล่าง</button><button data-bm="5">6 จัดเฟส ACSR ใหม่</button>
+        <button data-bm="2">3 แผนงาน 22 kV</button><button data-bm="3">4 ย้ายเสา 115 kV ฝั่งใต้</button><button data-bm="4">5 ตัด DE วงจรล่าง</button><button data-bm="5">6 จัดเฟส ACSR ใหม่</button><button data-bm="7">8 TAC เกาะสะพาน</button>
         <button id="boqCopy">คัดลอกตาราง (วางใน Excel)</button><button id="boqClose">กลับไปโมเดล 3D</button>
       </div>
       <div class="grid-wrap"><table class="boq" id="boqT"></table></div>
@@ -230,6 +231,23 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <label for="x3h">ความสูงตำแหน่งเพิ่มเหนือดิน (ม.)</label><input id="x3h" type="number" step="0.05" value="10.65">
         <label for="sepMin">ระยะห่างระหว่างเฟสขั้นต่ำ (ม.)</label><input id="sepMin" type="number" step="0.1" value="1.4">
         <p class="assume">ระยะห่างเฟสขั้นต่ำ 1.40 ม. = ระยะดิ่งระหว่างวงจร 22 kV บนเสาเดียวกัน ตามคู่มือ 22/33 kV ตาราง 8.11 (คำแนะนำ 115 kV ตาราง 6-4 ใช้ 1.30 ม.) ระยะห่างเฟสทางราบขั้นต่ำ 0.453 ม. (ตาราง 8.13) ตำแหน่งลูกถ้วยเพิ่ม +3.5 ม. สูง 10.65 ม. เป็นค่าสมมติ (คอนชั้นที่ 3 ต้องออกแบบตามแบบมาตรฐาน) ตรวจระยะสายถึงผิวเสา 0.20 ม. ด้วย</p>
+      </div>
+    </section>
+
+    <section id="secTac">
+      <h2>TAC เกาะสะพานทั้งสองฝั่ง (ขั้นที่ 8)</h2>
+      <p class="note" style="border:0;padding:0;margin:0 0 8px">เปลี่ยนสาย 22 kV ช่วงข้ามเป็นสายเคเบิลอากาศ (TAC) ยึดด้านนอกคาน Box Beam ตัวริมนอกของสะพานแต่ละฝั่ง ตามแบบ 2326 (SA2-015/52008) มีเสาเปลี่ยนชนิดสาย 2314A (SA2-015/51003) ที่หัวสะพานทั้งสองด้าน RT. รับวงจร H-Frame, LT. รับ 22 kV ที่พาดใต้ 115 kV สาย 115 kV ไม่เปลี่ยน</p>
+      <div class="calc">
+        <label for="tacN">จำนวนวงจรฝั่ง RT. (1 = ตัด DE วงจรล่าง)</label><input id="tacN" type="number" min="1" max="2" step="1" value="1">
+        <label for="tacSp">ระยะจุดยึดสูงสุด (ม.)</label><input id="tacSp" type="number" step="0.5" value="10">
+        <label for="tacSag">ระยะหย่อนระหว่างจุดยึด (ม.)</label><input id="tacSag" type="number" step="0.05" value="0.3">
+        <label for="tacY">ระดับจุดยึดเทียบพื้นสะพาน (ม.)</label><input id="tacY" type="number" step="0.05" value="-0.35">
+        <label for="tacTr">เสา 2314A ห่างตอม่อริมตามแนวทาง (ม.)</label><input id="tacTr" type="number" step="0.5" value="5">
+        <label for="tacOff">เสา 2314A ห่างขอบทาง (ม.)</label><input id="tacOff" type="number" step="0.1" value="2.0">
+        <label for="tacW">น้ำหนักสาย TAC + อุปกรณ์ (กก./ม./วงจร)</label><input id="tacW" type="number" step="0.05" value="6.85">
+        <label for="tacBr">น้ำหนักแคล้มป์ยึด (กก./จุด)</label><input id="tacBr" type="number" step="0.5" value="10">
+        <label for="tacAnc">กำลังพุกเคมี M10 (กก./ตัว)</label><input id="tacAnc" type="number" step="10" value="800">
+        <p class="assume">จากแบบ: จุดยึดห่างไม่เกิน 10 ม. (บนคานขวางได้ 30 ม.) ช่วงแรก/สุดท้ายใช้ 2 ชุด ระยะหย่อน 0.3 ม. สายต้องไม่ต่ำกว่าท้องคาน ป้ายเตือนทุก ≤ 30 ม. (2326) น้ำหนัก 6.85 กก./ม. และขนาดสายภายนอกประมาณ 10.5 ซม. (2331 หมายเหตุ 1) แคล้มป์ SBT ประมาณ 10 กก. (2332/2333) พุกเคมี M10 ≥ 800 กก. ฝั่งละไม่เกิน 2 วงจร (9508) ผู้รับจ้างต้องส่งรายการคำนวณให้ กฟภ. และต้องได้รับอนุญาตจากเจ้าของสะพาน (2326 ข้อ 10–11) <b>ค่าสมมติ:</b> ระดับจุดยึด −0.35 ม. ตำแหน่งเสา 2314A (ห่างตอม่อริม 5 ม. ข้างแผ่นพื้นทางเข้า ห่างขอบทาง 2.0 ม. และไม่ใกล้กว่าแนวจุดยึด + 0.3 ม. วงจรที่ 2 ห่างออกไปอีก 2.5 ม.) วงจรที่ 2 ยึดต่ำลง 0.30 ม. พื้นสะพานถือว่าระดับ 100.000 ตลอดช่วง</p>
       </div>
     </section>
 
@@ -380,7 +398,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   };
   const B = c => new THREE.MeshBasicMaterial({ color: c });
   const lineMat = {
-    acsr: B(0x6b4a1d), sac: B(0x2b2b2b), hv: B(0x1c2f6e), neu: B(0x1f9a55), neuHv: B(0x0f6b38),
+    acsr: B(0x6b4a1d), sac: B(0x2b2b2b), tac: B(0x123c2a), hv: B(0x1c2f6e), neu: B(0x1f9a55), neuHv: B(0x0f6b38),
     ghost: new THREE.MeshBasicMaterial({ color: 0xc0262d, transparent: true, opacity: .25 }), bad: B(0xc0262d),
     enc: new THREE.MeshBasicMaterial({ color: 0xe0242c, transparent: true, opacity: .55, depthWrite: false }),
     encRoad: new THREE.MeshBasicMaterial({ color: 0xe5934d, transparent: true, opacity: .5, depthWrite: false }),
@@ -670,8 +688,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
     }
     return g;
   }
-  function single(x, z, m, h, parent, kind = 'P2207') { const g = grp(x, z, parent);
-    sqPole(...POLE_W.p12, h, m, 0, 0, 0, g); if (PARTS) part(kind, m, g, h); else box(0.14, 0.14, 2.4, mat.arm, 0, h - 0.6, 0, g); return g; }
+  function single(x, z, m, h, parent, kind = 'P2207', ry = 0) { const g = grp(x, z, parent);
+    sqPole(...POLE_W.p12, h, m, 0, 0, 0, g); if (PARTS) part(kind, m, g, h, ry); else box(0.14, 0.14, 2.4, mat.arm, 0, h - 0.6, 0, g); return g; }
   function ring(x, z, r, color, parent) {
     const m = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.5, 40), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: .85 }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, Math.max(gy(x, z), 0) + 0.08, z); parent.add(m);
@@ -848,7 +866,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     S.span115 = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const L = Math.hypot(line115[i + 1][0] - line115[i][0], line115[i + 1][1] - line115[i][1]), s = sagT(L);
-      const mH = hvM(i), m22 = mode === 3 && i <= 1 ? lineMat.neu : lineMat.acsr;
+      const mH = hvM(i), m22 = mode === 3 && i <= 1 ? lineMat.neu : mode === 7 ? lineMat.ghost : lineMat.acsr;
       let worst = null, worst22 = null;
       pts[i].hv.forEach((p, k) => { const q = pts[i + 1].hv[k]; polesG.add(wire(p, q, s, mH, 0.04)); const c = clearance(p, q, s); if (!worst || c.vRoad < worst.vRoad) worst = c; });
       pts[i].mv.forEach((p, k) => { const q = pts[i + 1].mv[k]; polesG.add(wire(p, q, s * 0.9, m22, 0.035)); const c = clearance(p, q, s * 0.9); if (!worst22 || c.vRoad < worst22.vRoad) worst22 = c; });
@@ -883,6 +901,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
         const n = pl.acsr.filter(pl.enc).length;
         put(polesG, `22 kV ช่วง ${fmt(L22)} ม.: ACSR ล้ำแนวสะพาน ${n} เฟส`, 20, gy() + pl.hT + 1.5, HF[1][1] - 3, n ? BAD : NEW);
       }
+    } else if (mode === 7) {
+      tacBuild(pl, pts, tag);
     } else if (mode === 5) {
       const ar = arrange22(); S.ar = ar;
       pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.ghost, 0.06)));
@@ -919,6 +939,68 @@ table.ph th { color: var(--muted); font-weight: 600; }
       if (w) vdim(w.c.pDeck, `ACSR เหนือ deck RT. ${fmt(w.c.vDeck)} ม.`, vOk(w.c.vDeck).b ? NEW : BAD, polesG);
       const hmin = pl.moved.filter(p => !p.c.over).sort((p, q) => p.c.h - q.c.h)[0];
       if (hmin && hmin.c.pH) hdim(hmin.c.pH.x, DOH.rt[1], hmin.c.pH.z, 1.5, `ระยะราบถึงขอบสะพาน ${fmt(hmin.c.h)} ม.`, hmin.c.h >= 1.8 ? NEW : BAD, polesG);
+    }
+  }
+
+
+  // ---------- step 8: TAC 22 kV on the outer box beams of both new bridges (2326), 2314A transition poles at both ends ----------
+  function tacBuild(pl, pts, tag) {
+    const T = { n: Math.min(2, Math.max(1, Math.round(num('tacN')) || 1)), sp: num('tacSp'), sag: num('tacSag'), y: num('tacY'), tr: num('tacTr'), off: num('tacOff'),
+      w: num('tacW'), br: num('tacBr'), anc: num('tacAnc') };
+    S.tac = T;
+    pl.acsr.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.ghost, 0.035)));
+    pl.sac.forEach(p => polesG.add(wire(p.a, p.b, p.sag, lineMat.ghost, 0.06)));
+    put(polesG, `รื้อช่วงข้าม 22 kV เดิม (H-Frame ${fmt(L22)} ม. และพาดใต้ 115 kV)`, 0, gy() + pl.hT + 1.5, HF[1][1] - 3, BAD);
+    const xP = [DOH.abut[0] - T.tr, DOH.abut[1] + T.tr], L = DOH.abut[1] - DOH.abut[0], nSeg = Math.max(1, Math.ceil(L / T.sp - 1e-9)), sp = L / nSeg;
+    const yS = DOH.deck - 100 + T.y, half = P.ROW / 2, Wp = POLE_W.p12[1];
+    const tacPt = (x, z, ry, k) => {   // 2314A head points in world coordinates (part placed at the pole top, h = 10 m)
+      const hp = PARTS && PARTS.T2314A ? PARTS.T2314A.pts : null, c = Math.cos(ry), sn = Math.sin(ry), b = V(x, gy(x, z) + 10, z);
+      const w = q => V(q.x * c + q.z * sn, q.y, -q.x * sn + q.z * c).add(b);
+      return { bare: (hp ? hp.bare : [-1.05, 0, 1.05].map(zz => V(-1.2, -0.25, zz))).map(w), tac: w(hp ? hp.tac[0] : V(0.8, -1.59, 0)) };
+    };
+    S.tac.sides = [];
+    const SIDES = [
+      { s: 'RT.', n: T.n, sg: 1, zFace: DOH.rt[1] + 0.12, edge: edgeE, src: k => (k ? pl.sac : pl.acsr).map(p => [p.a, p.b]) },
+      { s: 'LT.', n: 1, sg: -1, zFace: DOH.lt[0] - 0.12, edge: edgeW, src: () => pts[0].mv.map((a, j) => [a, pts[pts.length - 1].mv[j]]) },
+    ];
+    for (const sd of SIDES) {
+      const R = { s: sd.s, n: sd.n, nSeg, sp, sup: [], poles: [], route: [], bare: [], low: Infinity };
+      for (let k = 0; k < sd.n; k++) {
+        const ends = xP.map((x, e) => { const o = Math.max(sd.edge(x) + T.off, Math.abs(sd.zFace) + 0.3 + Wp / 2) + k * 2.5, z = sd.sg * o, ry = e ? Math.PI : 0;   // bare side (local −x) faces away from the bridge
+          tag(single(x, z, mat.poleNew, 10, polesG, 'T2314A', ry), `เสา 2314A ${sd.s} ${e ? 'ฝั่งเหนือ' : 'ฝั่งใต้'}${k ? ' วงจร 2' : ''} along ${fmt(x)}`, 'mv', 10);
+          ring(x, z, 0.9, 0x1f9a55, polesG);
+          R.poles.push({ x, o, d: o - sd.edge(x) - Wp / 2, row: o + Wp / 2 <= half, slab: x >= DOH.slab[0] && x <= DOH.slab[1] && o - Wp / 2 < sd.edge(x),
+            hv: Math.min(...CONDS.filter(c => c.kv === 115).map(c => { let d = Infinity; const top = V(x, gy(x, z) + 10, z); for (let t = 0; t <= 1; t += 0.01) d = Math.min(d, spanPt(c.a, c.b, c.sag, t).distanceTo(top)); return d; })) });
+          return tacPt(x, z, ry, k); });
+        // TAC route: pole -> supports on the outer beam face -> pole
+        const ys = yS - 0.3 * k, sups = [];
+        for (let i = 0; i <= nSeg; i++) sups.push(V(DOH.abut[0] + i * sp, ys, sd.zFace));
+        const chain = [ends[0].tac, ...sups, ends[1].tac];
+        let len = 0;
+        for (let i = 0; i < chain.length - 1; i++) { const a = chain[i], b = chain[i + 1], Ls = a.distanceTo(b), sg = i === 0 || i === chain.length - 2 ? Math.min(0.6, T.sag * (Ls / sp) ** 2) : T.sag;
+          polesG.add(wire(a, b, sg, lineMat.tac, 0.0525)); len += Ls;
+          if (i === 0 || i === chain.length - 2) for (let t = 0.05; t <= 0.951; t += 0.05) { const q = spanPt(a, b, sg, t), road = Math.abs(q.z) < sd.edge(q.x), g = q.y - gy(q.x, q.z);
+            if (road) R.road = Math.min(R.road ?? Infinity, g); else R.gnd = Math.min(R.gnd ?? Infinity, g); }
+          if (i > 0 && i < chain.length - 2) R.low = Math.min(R.low, Math.min(a.y, b.y) - sg); }
+        R.route.push(len);
+        sups.forEach((q, i) => { const dbl = i === 0 || i === nSeg;
+          for (const dx of dbl ? [-0.4, 0.4] : [0]) { box(0.16, 0.22, 0.1, mat.steel, q.x + dx, q.y + 0.08, sd.zFace - sd.sg * 0.07, polesG); }
+          if (!k) R.sup.push({ x: q.x, dbl }); });
+        // bare conductor from the existing poles to the 2314A bare side
+        sd.src(k).forEach(([a, b], j) => { for (const [p, q] of [[a, ends[0].bare[j]], [ends[1].bare[j], b]]) {
+          const Ls = p.distanceTo(q); polesG.add(wire(p, q, Math.max(0.1, 0.004 * Ls * Ls / 10), sd.s === 'RT.' && k ? lineMat.sac : lineMat.acsr, 0.035)); R.bare.push(Ls); } });
+      }
+      // warning signs every <= 30 m along the bridge
+      const nSign = Math.ceil(L / 30) + 1;
+      for (let i = 0; i < nSign; i++) box(0.04, 0.3, 0.45, mat.poleWarn, DOH.abut[0] + i * L / (nSign - 1), yS + 0.35, sd.zFace + sd.sg * 0.04, polesG);
+      R.nSign = nSign;
+      R.load = T.w * sd.n * sp + T.br;                   // kg per support (both circuits share the support line)
+      R.kgm = T.w * sd.n + T.br * (nSeg + 3) / L;
+      R.tot = T.w * sd.n * L + T.br * (nSeg + 3) * sd.n;
+      S.tac.sides.push(R);
+      put(polesG, `TAC 22 kV ${sd.n} วงจร เกาะคานริมนอก ${sd.s} จุดยึด ${nSeg + 1} จุด @ ${fmt(sp)} ม.`, 0, yS - 2.4, sd.zFace + sd.sg * 3, NEW);
+      vdim(V(0, R.low, sd.zFace + sd.sg * 0.6), `ต่ำสุด ${f2(R.low + 100)} ท้องคาน ${f2(DOH.soffit)}`, R.low + 100 >= DOH.soffit ? NEW : BAD, polesG, DOH.hwl - 100);
+      xP.forEach((x, e) => put(polesG, `2314A ${sd.s}`, x, gy(x, sd.sg * (sd.edge(x) + T.off)) + 12, sd.sg * (sd.edge(x) + T.off), NEW));
     }
   }
 
@@ -1058,6 +1140,22 @@ table.ph th { color: var(--muted); font-weight: 600; }
         `<div>ระยะดิ่งเหนือพื้นสะพาน/ผิวทาง เกณฑ์ 7.50 ม. ${ok(okV)}</div>` +
         `<div style="color:var(--warn)">ยังต้องตรวจ: อุปกรณ์จับปลายสาย/แคล้มป์ตำแหน่ง SAC เดิมใช้กับ ACSR ได้หรือไม่ แรงดึงและระยะหย่อนจริงช่วง ${fmt(L22)} ม. ระยะห่างระหว่างเฟสเมื่อย้ายลง</div>` +
         `<div style="color:var(--muted);font-size:13px">ถ้าลูกถ้วยวงจรล่างอยู่ตำแหน่งทางราบเดียวกับวงจรบน การย้ายลงไม่ได้เพิ่มระยะทางราบ ให้กรอกตำแหน่งจริงจากการสำรวจ</div>`;
+    } else if (P.mode === 7 && S.tac) {
+      const T = S.tac, sd = T.sides, okSp = sd.every(r => r.sp <= 10 + 1e-9), okLow = sd.every(r => r.low + 100 >= DOH.soffit - 1e-9), okLd = sd.every(r => r.load <= T.anc);
+      const pol = sd.flatMap(r => r.poles.map(p => ({ ...p, s: r.s }))), badP = pol.filter(p => p.slab || p.d < 0 || !p.row), lowP = pol.filter(p => p.d >= 0 && p.d < P.low);
+      el.innerHTML = `<div class="big ${okSp && okLow && okLd && !badP.length ? 'st-warn' : 'st-bad'}">TAC เกาะสะพาน: ตามแบบ 2326 ${okSp && okLow && okLd ? 'ได้' : 'ไม่ผ่านบางข้อ'} · รอ ทล. อนุญาต</div>` +
+        '<table class="ph"><tr><th>ฝั่ง</th><th>วงจร</th><th>จุดยึด</th><th>ระยะ</th><th>ต่ำสุด</th><th>เหนือ H.W.L.</th><th>แรงต่อจุด</th><th>น้ำหนักเพิ่ม</th></tr>' +
+        sd.map(r => `<tr><td>${r.s}</td><td>${r.n} ${ok(r.n <= 2)}</td><td>${r.nSeg + 1} (+2 ปลาย)</td><td>${f2(r.sp)} ม. ${ok(r.sp <= 10 + 1e-9)}</td>` +
+          `<td>${f2(r.low + 100)} ${ok(r.low + 100 >= DOH.soffit - 1e-9)}</td><td>${f2(r.low + 100 - DOH.hwl)} ม.</td><td>${fmt(r.load)} กก. ${ok(r.load <= T.anc)}</td><td>${fmt(r.kgm)} กก./ม. (${fmt(r.tot)} กก.)</td></tr>`).join('') + '</table>' +
+        `<div>เกณฑ์: จุดยึด ≤ 10 ม., สายต่ำสุดไม่ต่ำกว่าท้องคาน ${f2(DOH.soffit)} (H.W.L. ${f2(DOH.hwl)}), แรงต่อจุด (สาย ${fmt(T.w)} กก./ม. × ระยะจุดยึด × วงจร + แคล้มป์ ${fmt(T.br)} กก.) ≤ พุกเคมี ${fmt(T.anc)} กก./ตัว (ยังไม่รวมแรงลมและตัวคูณความปลอดภัย)</div>` +
+        `<div>น้ำหนักเพิ่มต่อสะพาน 1 ฝั่ง ≈ ${sd.map(r => `${r.s} ${fmt(r.kgm)} กก./ม.`).join(', ')} ต้องให้ ทล. ตรวจกำลังคาน Box Beam (BB-101 ถึง BB-103) และอนุญาตเจาะพุก ไม่ให้โดนลวดอัดแรง</div>` +
+        '<table class="ph"><tr><th>เสา 2314A</th><th>along</th><th>offset</th><th>ห่างขอบทาง</th><th>ยอดเสาถึงสาย 115 kV</th><th>ผล</th></tr>' +
+        pol.map(p => `<tr><td>${p.s}</td><td>${fmt(p.x)}</td><td>${fmt(p.o)}</td><td>${f2(p.d)}</td><td>${f2(p.hv)}</td><td>${p.slab ? '<span class="st-bad">อยู่ในแผ่นพื้นทางเข้า</span>' : p.d < 0 ? '<span class="st-bad">อยู่บนผิวถนน</span>' : !p.row ? '<span class="st-bad">นอกเขตทาง (ค่าสมมติ)</span>' : p.d < P.low ? '<span class="st-warn">อยู่ใน L.O.W. (ค่าสมมติ)</span>' : '<span class="st-ok">ได้</span>'}</td></tr>`).join('') + '</table>' +
+        (badP.length || lowP.length ? `<div class="st-warn">ปรับตำแหน่งเสา 2314A: ${[...badP, ...lowP].map(p => `${p.s} along ${fmt(p.x)}`).join(', ')}</div>` : '') +
+        `<div>ช่วงสาย TAC จากเสาถึงจุดยึดแรก (2 ช่วงรวม) ${sd.map(r => `${r.s} ${fmt(r.route[0] - r.nSeg * r.sp)} ม.`).join(', ')} · ระยะสายถึงพื้นต่ำสุดในช่วงนี้ ${sd.map(r => `${r.s} ${f2(r.gnd ?? NaN)} ม.` + (r.road != null ? ` เหนือถนน ${f2(r.road)} ม. ${ok(r.road >= 5.1)} (TAC เหนือถนน 5.10 ม.)` : '')).join(', ')}</div>` +
+        `<div>ยอดเสา 2314A ถึงสาย 115 kV ต่ำสุด ${f2(Math.min(...pol.map(p => p.hv)))} ม. (อ้างอิงระยะวงจร 115/22 kV 2.40 ม.) ${ok(Math.min(...pol.map(p => p.hv)) >= 2.4)}</div>` +
+        `<div class="st-bad">ไม่แก้ปัญหา 115 kV: เสา 115 kV หัวสะพานฝั่งใต้ยังอยู่ในแผ่นพื้นทางเข้า และสาย 115 kV ยังพาดเหนือพื้นสะพาน LT. (${fmt(S.span115[1].c.vDeck)} ม.) ต้องใช้ทางเลือกย้ายเสา 115 kV ร่วมด้วย</div>` +
+        `<div style="color:var(--warn)">ต้องได้: หนังสืออนุญาตจาก ศูนย์สร้างและบูรณะสะพานที่ 2 (หนังสือ 06), รายการคำนวณของผู้รับจ้าง (2326 ข้อ 10), แบบคาน/ราวสะพานจริง, ขนาดสาย TAC (≤ 240 ตร.มม.) ถ้า ทล. ไม่อนุญาตต้องใช้วิธีอื่น (9508)</div>`;
     } else if (P.mode === 5) {
       const ar = S.ar, bad = ar.ph.filter(p => !(!p.c.over && p.c.h >= 1.8));
       el.innerHTML = `<div class="big ${ar.clear === 3 && ar.sep >= ar.sepMin ? 'st-ok' : 'st-warn'}">จัดเฟส ACSR ใหม่: พ้นแนวสะพาน ${ar.clear} จาก 3 เฟส</div>` +
@@ -1129,7 +1227,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     oldG.visible = P.mode === 0; newG.visible = P.mode >= 1;
     document.getElementById('secRig').style.display = P.mode === 6 ? '' : 'none'; document.getElementById('secShift').style.display = P.mode >= 1 ? '' : 'none'; document.getElementById('vrig').hidden = P.mode !== 6;
     document.getElementById('secMove').style.display = P.mode === 3 ? '' : 'none';
-    document.getElementById('secArr').style.display = P.mode === 5 ? '' : 'none';
+    document.getElementById('secArr').style.display = P.mode === 5 ? '' : 'none'; document.getElementById('secTac').style.display = P.mode === 7 ? '' : 'none';
     for (const id of ['vdeS', 'vdeN']) document.getElementById(id).hidden = P.mode !== 4 && P.mode !== 5;
     status();
     if (!document.getElementById('boqv').hidden) renderBoq();
@@ -1144,7 +1242,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   for (const k of ['s115', 's22']) { const i = document.getElementById(k), o = document.getElementById(k + 'o'); const upd = () => { SH[k] = parseFloat(i.value); o.textContent = fmt(SH[k]); }; upd(); i.addEventListener('input', () => { upd(); rebuild(); }); } bind('rigH', 'rigH');
   document.getElementById('g0').addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { P.g0 = v; rebuild(); } });
   document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => { P.mode = +b.dataset.mode; rebuild(); }));
-  for (const id of ['cw', 'ca', 'ce', 'cal', 'ch', 'tA', 'cd', 'cu', 'tmin', 'tavg', 'qc', 'v115', 'hTop', 'hLow', 'dzTop', 'dzLow', 'sag22', 'sagSac', 'mvA', 'mvO', 'x3On', 'x3dz', 'x3h', 'sepMin', 'rigAt', 'safe22', 'safe115'])
+  for (const id of ['cw', 'ca', 'ce', 'cal', 'ch', 'tA', 'cd', 'cu', 'tmin', 'tavg', 'qc', 'v115', 'hTop', 'hLow', 'dzTop', 'dzLow', 'sag22', 'sagSac', 'mvA', 'mvO', 'x3On', 'x3dz', 'x3h', 'sepMin', 'rigAt', 'safe22', 'safe115', 'tacN', 'tacSp', 'tacSag', 'tacY', 'tacTr', 'tacOff', 'tacW', 'tacBr', 'tacAnc'])
     document.getElementById(id).addEventListener('input', rebuild);
 
   const views = {
@@ -1197,7 +1295,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       ['แหวนสี่เหลี่ยมแบน 62×62×6', 6, 'ตัว', '01180101'], ['แหวนสปริง M16', 3, 'ตัว', '01180301'], ['ชุดลูกถ้วยแขวน (D-17C)', 3, 'ชุด', 'D-17C'],
       ['ชุดสายล่อฟ้า (D-51)', 1, 'ชุด', 'D-51'], ['ฐานรากเสา (D-10A)', 1, 'ชุด', 'D-10A'], ['การต่อลงดิน (D-25)', 1, 'ชุด', 'D-25']],
   };
-  const MODE_N = { 2: '3 แผนงาน 22 kV (H-Frame เดิม)', 3: '4 ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)', 4: '5 ตัด DE วงจรล่างที่ H-Frame ทั้งสองฝั่ง', 5: '6 จัดเฟส ACSR ใหม่ (เสนอ)' };
+  const MODE_N = { 2: '3 แผนงาน 22 kV (H-Frame เดิม)', 3: '4 ย้ายเสา 115 kV ฝั่งใต้ (ค่าสมมติ)', 4: '5 ตัด DE วงจรล่างที่ H-Frame ทั้งสองฝั่ง', 7: '8 TAC เกาะสะพานทั้งสองฝั่ง (ค่าสมมติบางส่วน)', 5: '6 จัดเฟส ACSR ใหม่ (เสนอ)' };
   function boqRows() {
     const R = [], m = v => Math.ceil(v), sec = t => R.push({ sec: t }), it = (d, ref, q, u, key = d) => R.push({ d, ref, q, u, key });
     const asm = (d, ref, n) => { R.push({ d: `${d} ×${n} ชุด`, ref: 'แบบ ' + ref, asm: true });
@@ -1210,6 +1308,21 @@ table.ph th { color: var(--muted); font-weight: 600; }
       it('ย้ายสาย ACSR ลงลูกถ้วยวงจรล่าง (ปลายละ 1 จุดต่อเฟส)', '—', 2 * n, 'จุด', 'mvacsr');
       it('สเตรนแคลมป์ Al/ACSR (เฉพาะถ้าของเดิมใช้กับ ACSR ไม่ได้)', '03110000', 2 * n, 'ชุด', 'clamp');
       it('ปรับระยะหย่อนสาย ACSR ช่วงข้าม', '—', n, 'เฟส', 'resag');
+    } else if (P.mode === 7 && S.tac) {
+      const T = S.tac, sd = T.sides, nPole = sd.reduce((t, r) => t + 2 * r.n, 0), sp115 = S.span115.reduce((t, x) => t + x.L, 0);
+      sec('งานรื้อถอน');
+      it('รื้อช่วงข้าม ACSR วงจรบน H-Frame (ความยาวช่วง × 3 เฟส)', 'ผู้ใช้แจ้ง', m(L22 * 3), 'ม.', 'rm:acsr');
+      it(T.n === 2 ? 'รื้อช่วงข้ามวงจรล่าง 120 SAC (× 3 เฟส)' : 'รื้อช่วงข้ามวงจรล่าง 120 SAC (× 3 เฟส) และ DE ด้านนอก', 'ผู้ใช้แจ้ง', m(L22 * 3), 'ม.', 'rm:sac');
+      it('รื้อสาย 22 kV พาดใต้ 115 kV 3 ช่วง (× 3 เฟส)', '—', m(sp115 * 3), 'ม.', 'rm:c22u');
+      if (T.n === 1) it('ตรวจ/ติดตั้งชุดเข้าปลายสาย (DE) วงจรล่างด้านนอก 2 ฝั่ง × 3 เฟส', '—', 6, 'ชุด', 'de:low');
+      sec('งานติดตั้ง');
+      it('เสาเปลี่ยนชนิดสาย TAC พร้อมกับดักเสิร์จและหัวเคเบิล 1 วงจร (เสา 12 ม.)', 'แบบ 2314A', nPole, 'ต้น', 't2314a');
+      sd.forEach(r => it(`สาย TAC 22 kV เกาะสะพาน ${r.s} (ระยะตามแนว + 3% ต่อวงจร)`, 'แบบ 2326', m(r.route.reduce((a, b) => a + b, 0) * 1.03), 'ม.', 'tac:' + r.s));
+      it('ชุดแคล้มป์ยึดสาย SBT (จุดยึด + ชุดเพิ่มช่วงแรก/สุดท้าย)', 'แบบ 2332/2333', sd.reduce((t, r) => t + (r.nSeg + 3) * r.n, 0), 'ชุด', 'tac:sbt');
+      it('พุกเคมี M10 (จำนวนต่อชุดตามแบบ)', 'แบบ 2331', null, 'ตัว', 'tac:anc');
+      it('ป้ายเตือนอันตรายไฟฟ้าแรงสูง (ทุก ≤ 30 ม.)', 'แบบ 2326', sd.reduce((t, r) => t + r.nSign, 0), 'ป้าย', 'tac:sign');
+      it('สายเปลือยจากเสาเดิมถึงเสา 2314A (× เฟส)', '—', m(sd.reduce((t, r) => t + r.bare.reduce((a, b) => a + b, 0), 0)), 'ม.', 'tac:bare');
+      it('รายการคำนวณโครงสร้างและแบบติดตั้ง เสนอ กฟภ./ทล.', 'แบบ 2326 ข้อ 10–11', 1, 'งาน', 'tac:calc');
     } else if (P.mode === 5) {
       const ar = S.ar, n = ar.ph.filter(p => p.moved).length;
       sec('งานรื้อถอน');
@@ -1275,7 +1388,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   };
 
   // URL hash picks a starting step/view (used for printable stills): #s0-v3d etc.; #boq opens the BOQ
-  const h = (location.hash || '').match(/^#s([0-6])-(v3d|vtop|vroad|vside|v22|vunder|vdet|vdeS|vdeN|vrig)$/);
+  const h = (location.hash || '').match(/^#s([0-7])-(v3d|vtop|vroad|vside|v22|vunder|vdet|vdeS|vdeN|vrig)$/);
   if (h) P.mode = +h[1];
   rebuild(); go(h ? h[2] : 'v3d', true);
   if ((location.hash || '') === '#boq') { P.mode = 2; rebuild(); document.getElementById('boqv').hidden = false; renderBoq(); }
