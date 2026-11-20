@@ -298,6 +298,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <div><span style="background:#d07a1a"></span>L.O.W. (ค่าสมมติ)</div>
         <label><input type="checkbox" id="routeOn"> <span style="background:#5b2a86"></span>แนวถนนทั้งโครงการ กม.4+800–25+800 (DWG ทล.) และเสาไฟฟ้าที่ ทล. สำรวจ</label>
         <p class="assume" id="routeNote" hidden></p>
+        <label id="routeCadL" hidden><input type="checkbox" id="routeCad"> <span style="background:#5b2a86"></span>เส้นแบบ CAD ของ ทล. (ตรวจเทียบ)</label>
         <label><input type="checkbox" id="satOn"> <span style="background:linear-gradient(90deg,#4d5b3a,#8a8f7a,#5d6b55)"></span>ภาพดาวเทียม (Esri World Imagery)</label>
         <p class="assume" id="satNote" hidden></p>
         <label><input type="checkbox" id="demOn"> <span style="background:linear-gradient(90deg,#a7c98a,#ece0ae,#cfa784)"></span>ภูมิประเทศ Copernicus DEM 30 ม. (เส้นชั้นความสูง 1 ม.)</label>
@@ -1220,50 +1221,111 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const rCls = p => p.edge == null ? 'none' : Math.abs(p.off) <= p.edge ? 'bad' : Math.abs(p.off) <= p.edge + P.low ? 'warn' : 'ok';
   function buildRoute() {
     routeG.clear(); if (!RTE) return;
-    const { R, S, toM } = RTE;
-    const LCOL = { design: 0x5b2a86, edge: 0x7d6aa0, row: 0x2f6fd0, exroad: 0x8c826e, bridge: 0x3b3f3d, water: 0x4f87b0, bldg: 0xb07a4f };
-    for (const [k, c] of Object.entries(LCOL)) {
-      const pos = [];
-      for (const a of R.layers[k]) for (let i = 2; i < a.length; i += 2) {
-        const [x0, z0] = toM(a[i - 2] * S + R.E0, a[i - 1] * S + R.N0), [x1, z1] = toM(a[i] * S + R.E0, a[i + 1] * S + R.N0);
-        if (Math.abs(x0) < 235 && Math.abs(z0) < 60 && k !== 'row' && k !== 'design') continue;   // near the bridge the detailed model is used
-        pos.push(x0, routeY(x0, z0), z0, x1, routeY(x1, z1), z1);
+    const { R, S, toM } = RTE, T = R.tpl, EMB = 0.6, g0 = P.g0 - 100;   // embankment height 0.6 m = ค่าสมมติ
+    // ---- stations (model coords) with tangent / right normal ----
+    const st = R.xs.map(r => { const [x, z] = toM(r[0] * S + R.E0, r[1] * S + R.N0); return { x, z, L: r[3], R: r[4] }; });
+    st.forEach((q, i) => { const a = st[Math.max(0, i - 1)], b = st[Math.min(st.length - 1, i + 1)], dx = b.x - a.x, dz = b.z - a.z, n = Math.hypot(dx, dz) || 1;
+      q.tx = dx / n; q.tz = dz / n; q.nx = -q.tz; q.nz = q.tx; });
+    const skip = q => Math.abs(q.x) < 232 && Math.abs(q.z) < 60;                    // the detailed bridge model owns this stretch
+    const topY = q => { const ax = Math.abs(q.x); return ax < 400 ? lerp(ax, 232, 0, 400, g0 + EMB) : g0 + EMB; };
+    // per side: list of [offset, y, colour] break points from the centre outwards
+    const C = { asp: [0.27, 0.28, 0.29], sh: [0.42, 0.43, 0.43], grass: [0.47, 0.6, 0.33], curb: [0.82, 0.82, 0.78], slope: [0.56, 0.6, 0.42], old: [0.36, 0.36, 0.35] };
+    const prof = (q, side) => { const y = topY(q), tpl = side > 0 ? q.R : q.L;
+      return tpl ? [[0, y + 0.18, 'grass'], [T.med - 0.15, y + 0.18, 'curb'], [T.med, y + 0.18, 'curb'], [T.med, y, 'asp'], [T.lane, y, 'sh'], [T.sh, y, 'slope'], [T.sh + EMB * 2, g0, null]]
+        : [[0, y, 'old'], [T.ex[0], y, 'sh'], [T.ex[1], y, 'slope'], [T.ex[1] + EMB * 2, g0, null]]; };
+    const pos = [], col = [];
+    const tri = (a, b, c, k) => { pos.push(...a, ...b, ...c); for (let n = 0; n < 3; n++) col.push(...C[k]); };
+    for (let i = 0; i < st.length - 1; i++) {
+      const a = st[i], b = st[i + 1]; if (skip(a) || skip(b)) continue;
+      for (const sd of [-1, 1]) {
+        const pa = prof(a, sd), pb = prof(b, sd);
+        if (pa.length !== pb.length) { // template switches: use the wider profile on both ends (short taper)
+          const w = pa.length > pb.length ? pa : pb; pa.splice(0, pa.length, ...w.map(v => [v[0], v[1] - topY(pa === w ? a : b) + topY(a), v[2]])); pb.splice(0, pb.length, ...w.map(v => [v[0], v[1] - topY(pb === w ? b : a) + topY(b), v[2]])); }
+        for (let k = 0; k < pa.length - 1; k++) {
+          const kind = pa[k][2]; if (!kind) continue;
+          const P0 = [a.x + a.nx * sd * pa[k][0], pa[k][1], a.z + a.nz * sd * pa[k][0]], P1 = [a.x + a.nx * sd * pa[k + 1][0], pa[k + 1][1], a.z + a.nz * sd * pa[k + 1][0]];
+          const Q0 = [b.x + b.nx * sd * pb[k][0], pb[k][1], b.z + b.nz * sd * pb[k][0]], Q1 = [b.x + b.nx * sd * pb[k + 1][0], pb[k + 1][1], b.z + b.nz * sd * pb[k + 1][0]];
+          if (sd > 0) { tri(P0, Q0, P1, kind); tri(P1, Q0, Q1, kind); } else { tri(P0, P1, Q0, kind); tri(P1, Q1, Q0, kind); }
+        }
       }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      routeG.add(new THREE.LineSegments(g, k === 'row' ? new THREE.LineDashedMaterial({ color: c, dashSize: 4, gapSize: 3 }) : new THREE.LineBasicMaterial({ color: c })));
-      if (k === 'row') routeG.children[routeG.children.length - 1].computeLineDistances();
     }
-    // design centreline + km labels
-    { const pos = []; const cl = R.cl; for (let i = 2; i < cl.length; i += 2) { const [x0, z0] = toM(cl[i - 2] * S + R.E0, cl[i - 1] * S + R.N0), [x1, z1] = toM(cl[i] * S + R.E0, cl[i + 1] * S + R.N0); pos.push(x0, routeY(x0, z0) + 0.05, z0, x1, routeY(x1, z1) + 0.05, z1); }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      const l = new THREE.LineSegments(g, new THREE.LineDashedMaterial({ color: 0xc0262d, dashSize: 6, gapSize: 3 })); l.computeLineDistances(); routeG.add(l); }
-    for (const [x, y, km] of R.kms) { if (km % 1000) continue; const [mx, mz] = toM(x * S + R.E0, y * S + R.N0);
-      const lb = put(routeG, `กม.${Math.floor(km / 1000)}+000`, mx, routeY(mx, mz) + 18, mz, { size: 2.4, color: '#7a1218', border: '#c0262d' });
-      lb.material.sizeAttenuation = false; lb.scale.multiplyScalar(0.02 / lb.scale.y); lb.userData.minD = 900; }
+    const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); rg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); rg.computeVertexNormals();
+    const road = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); road.receiveShadow = true; routeG.add(road);
+    // ---- markings: white edge lines, dashed lane lines (3 m / 6 m) ----
+    const mk = [], mkY = [];
+    const quad = (a, b, oa, ob, w, y) => { const A0 = [a.x + a.nx * (oa - w), y, a.z + a.nz * (oa - w)], A1 = [a.x + a.nx * (oa + w), y, a.z + a.nz * (oa + w)],
+      B0 = [b.x + b.nx * (ob - w), y, b.z + b.nz * (ob - w)], B1 = [b.x + b.nx * (ob + w), y, b.z + b.nz * (ob + w)]; mk.push(...A0, ...B0, ...A1, ...A1, ...B0, ...B1); };
+    for (let i = 0; i < st.length - 1; i++) { const a = st[i], b = st[i + 1]; if (skip(a) || skip(b)) continue; const y = topY(a) + 0.02, dash = (i % 3) === 0;
+      for (const sd of [-1, 1]) { const tpl = sd > 0 ? a.R && b.R : a.L && b.L;
+        if (tpl) { quad(a, b, sd * (T.med + 0.25), sd * (T.med + 0.25), 0.075, y); quad(a, b, sd * (T.lane - 0.2), sd * (T.lane - 0.2), 0.075, y); if (dash) quad(a, b, sd * T.mark, sd * T.mark, 0.06, y); }
+        else { quad(a, b, sd * (T.ex[0] - 0.15), sd * (T.ex[0] - 0.15), 0.06, y); } }
+      if (!a.L && !a.R && dash) quad(a, b, 0, 0, 0.06, y); }
+    { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(mk, 3)); g.computeVertexNormals();
+      routeG.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xf4f4ee, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 }))); }
+    // ---- R.O.W. (dashed blue on the ground) + water ribbons + buildings ----
+    const lineSeg = (arr, c, dashed, y = g0 + 0.06) => { const pts = []; for (const a of arr) for (let i = 2; i < a.length; i += 2) { const [x0, z0] = toM(a[i - 2] * S + R.E0, a[i - 1] * S + R.N0), [x1, z1] = toM(a[i] * S + R.E0, a[i + 1] * S + R.N0);
+        if (Math.abs(x0) < 235 && Math.abs(z0) < 60) continue; pts.push(x0, y, z0, x1, y, z1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+      const l = new THREE.LineSegments(g, dashed ? new THREE.LineDashedMaterial({ color: c, dashSize: 4, gapSize: 3 }) : new THREE.LineBasicMaterial({ color: c })); if (dashed) l.computeLineDistances(); return l; };
+    routeG.add(lineSeg(R.layers.row, 0x2f6fd0, true));
+    { const w = []; for (const a of R.layers.water) for (let i = 2; i < a.length; i += 2) { const [x0, z0] = toM(a[i - 2] * S + R.E0, a[i - 1] * S + R.N0), [x1, z1] = toM(a[i] * S + R.E0, a[i + 1] * S + R.N0);
+        if (Math.abs(x0) < 300 && Math.abs(z0) < 200) continue; const dx = x1 - x0, dz = z1 - z0, n = Math.hypot(dx, dz) || 1, ox = -dz / n * 1.2, oz = dx / n * 1.2, y = g0 + 0.04;
+        w.push(x0 - ox, y, z0 - oz, x1 - ox, y, z1 - oz, x0 + ox, y, z0 + oz, x0 + ox, y, z0 + oz, x1 - ox, y, z1 - oz, x1 + ox, y, z1 + oz); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(w, 3)); g.computeVertexNormals(); routeG.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0x5f8fa8, side: THREE.DoubleSide }))); }
+    for (const b of R.bldgs) { const pts = []; for (let i = 0; i < b.length; i += 2) { const [x, z] = toM(b[i] * S + R.E0, b[i + 1] * S + R.N0); pts.push(new THREE.Vector2(x, -z)); }
+      const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: 4, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, g0, 0);
+      const m = new THREE.Mesh(g, [M(0xb5533c), M(0xe3ddd0)]); m.castShadow = true; routeG.add(m); }
+    // thin CAD lines of the design (optional, for checking against the drawing)
+    const cad = new THREE.Group(); cad.name = 'cad'; cad.visible = document.getElementById('routeCad').checked;
+    cad.add(lineSeg(R.layers.design, 0x5b2a86, false, g0 + EMB + 0.05)); cad.add(lineSeg(R.layers.edge, 0x7d6aa0, false, g0 + EMB + 0.05)); routeG.add(cad);
+    // km posts
+    for (const [x, y, km] of R.kms) { if (km % 1000) continue; const [mx, mz] = toM(x * S + R.E0, y * S + R.N0); if (Math.abs(mx) < 235) continue;
+      const q = st.reduce((b, s2) => Math.hypot(s2.x - mx, s2.z - mz) < Math.hypot(b.x - mx, b.z - mz) ? s2 : b, st[0]), off = (q.R ? T.sh : T.ex[1]) + 1.2;
+      const px = q.x + q.nx * off, pz = q.z + q.nz * off; box(0.18, 1.0, 0.12, mat.rail, px, g0 + 0.5, pz, routeG);
+      const lb = put(routeG, `กม.${Math.floor(km / 1000)}+000`, px, g0 + 16, pz, { size: 2.4, color: '#7a1218', border: '#c0262d' });
+      lb.material.sizeAttenuation = false; lb.scale.multiplyScalar(0.02 / lb.scale.y); }
     // ground for the whole route (outside the detailed site terrain)
-    { const xs = R.kms.map(k => toM(k[0] * S + R.E0, k[1] * S + R.N0)); const x0 = Math.min(...xs.map(q => q[0])) - 600, x1 = Math.max(...xs.map(q => q[0])) + 600, z0 = Math.min(...xs.map(q => q[1])) - 1200, z1 = Math.max(...xs.map(q => q[1])) + 1200;
-      const gm = mat.ground, y = P.g0 - 100 - 0.05;
+    { const xs = st.map(q => [q.x, q.z]); const x0 = Math.min(...xs.map(q => q[0])) - 600, x1 = Math.max(...xs.map(q => q[0])) + 600, z0 = Math.min(...xs.map(q => q[1])) - 1200, z1 = Math.max(...xs.map(q => q[1])) + 1200;
+      const gm = new THREE.MeshLambertMaterial({ color: 0x8fa66b, polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 4 }), y = g0 - 0.02;
       for (const [a, b, c, d] of [[x0, -300, z0, z1], [300, x1, z0, z1], [-300, 300, z0, -200], [-300, 300, 200, z1]]) {
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(b - a, d - c), gm); m.rotation.x = -Math.PI / 2; m.position.set((a + b) / 2, y, (c + d) / 2); routeG.add(m); } }
-    // surveyed poles: 10 m square posts (height ค่าสมมติ) + screen-size dots
-    const n = R.poles.length, H = 10, geo = new THREE.BoxGeometry(0.3, H, 0.3).translate(0, H / 2, 0);
-    routeInst = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
-    const pp = [], m4 = new THREE.Matrix4(); routePts = [];
-    R.poles.forEach((q, i) => { const [x, z] = toM(q[0] * S + R.E0, q[1] * S + R.N0), y = routeY(x, z) - 0.12;
-      const p = { i: i + 1, x, z, y, sta: q[2], off: q[3], edge: q[4], row: q[5] }; routePts.push(p);
-      m4.makeTranslation(x, y, z); routeInst.setMatrixAt(i, m4); routeInst.setColorAt(i, RCOL[rCls(p)]); pp.push(x, y + H + 0.6, z); });
-    routeG.add(routeInst);
-    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3));
-    pg.setAttribute('color', new THREE.Float32BufferAttribute(routePts.flatMap(p => RCOL[rCls(p)].toArray()), 3));
-    routeG.add(new THREE.Points(pg, new THREE.PointsMaterial({ size: 7, sizeAttenuation: false, vertexColors: true })));
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(b - a, d - c), gm); m.rotation.x = -Math.PI / 2; m.position.set((a + b) / 2, y, (c + d) / 2); m.receiveShadow = true; routeG.add(m); } }
+    // ---- surveyed poles: 12 m square PC poles (8103 widths, height ค่าสมมติ), crossarm across the road, 3 insulators, class collar ----
+    const n = R.poles.length, H = 10.2;
+    routePts = R.poles.map((q, i) => { const [x, z] = toM(q[0] * S + R.E0, q[1] * S + R.N0); const s2 = st.reduce((b, c) => Math.hypot(c.x - x, c.z - z) < Math.hypot(b.x - x, b.z - z) ? c : b, st[0]);
+      const ax = Math.abs(x); return { i: i + 1, x, z, y: ax < 280 && Math.abs(z) < 190 ? gy(x, z) : g0, sta: q[2], off: q[3], edge: q[4], row: q[5], ry: Math.atan2(-s2.tz, s2.tx) }; });
+    const shaft = new THREE.CylinderGeometry(POLE_W.p12[0] / Math.SQRT2, POLE_W.p12[1] / Math.SQRT2, H, 4, 1).rotateY(Math.PI / 4).translate(0, H / 2, 0);
+    const arm = new THREE.BoxGeometry(0.1, 0.1, 2.4).translate(0, H - 0.35, 0);
+    const ins = new THREE.CylinderGeometry(0.05, 0.07, 0.22, 8).translate(0, H - 0.18, 0);
+    const collar = new THREE.CylinderGeometry(0.3, 0.3, 0.8, 12).translate(0, 2.4, 0);
+    const iShaft = new THREE.InstancedMesh(shaft, PART_MAT.concrete, n), iArm = new THREE.InstancedMesh(arm, PART_MAT.galv, n), iIns = new THREE.InstancedMesh(ins, PART_MAT.porcelain, n * 3), iCol = new THREE.InstancedMesh(collar, new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
+    const m4 = new THREE.Matrix4(), qt = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);
+    routePts.forEach((p, i) => { qt.setFromAxisAngle(up, p.ry); m4.compose(V(p.x, p.y, p.z), qt, one);
+      iShaft.setMatrixAt(i, m4); iArm.setMatrixAt(i, m4); iCol.setMatrixAt(i, m4); iCol.setColorAt(i, RCOL[rCls(p)]);
+      [-0.95, 0, 0.95].forEach((d, k) => { const o = V(p.x - Math.sin(p.ry) * 0 + Math.sin(p.ry) * d * 0, p.y, p.z); const off = V(0, 0, d).applyQuaternion(qt); m4.compose(o.add(off), qt, one); iIns.setMatrixAt(i * 3 + k, m4); }); });
+    for (const im of [iShaft, iArm, iIns, iCol]) { im.castShadow = true; routeG.add(im); }
+    routeInst = iShaft;
+    // conductors: consecutive poles on the same side, 20–120 m apart (line routing inferred from the pole order = ค่าสมมติ)
+    { const w = [], bySide = [routePts.filter(p => p.off < 0), routePts.filter(p => p.off >= 0)];
+      const pairs = []; for (const list of bySide) for (let i = 0; i < list.length; i++) { const a = list[i];
+        for (let j = i + 1; j < Math.min(list.length, i + 8); j++) { const c = list[j], L = Math.hypot(c.x - a.x, c.z - a.z); if (Math.abs(c.off - a.off) < 2.5 && L >= 20 && L <= 120) { pairs.push([a, c, L]); break; } } }
+      for (const [a, b, L] of pairs) {
+        const qa = new THREE.Quaternion().setFromAxisAngle(up, a.ry), qb = new THREE.Quaternion().setFromAxisAngle(up, b.ry), sag = 0.0012 * L * L / 8 + 0.3;
+        for (const d of [-0.95, 0, 0.95]) { const A = V(0, H - 0.05, d).applyQuaternion(qa).add(V(a.x, a.y, a.z)), B = V(0, H - 0.05, d).applyQuaternion(qb).add(V(b.x, b.y, b.z));
+          let prev = A; for (let k = 1; k <= 8; k++) { const t = k / 8, P2 = V(A.x + (B.x - A.x) * t, A.y + (B.y - A.y) * t - 4 * sag * t * (1 - t), A.z + (B.z - A.z) * t); w.push(prev.x, prev.y, prev.z, P2.x, P2.y, P2.z); prev = P2; } } }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(w, 3)); routeG.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x4a3a22 }))); }
+    // dots for the far view
+    { const pp = [], cc = []; routePts.forEach(p => { pp.push(p.x, p.y + H + 0.8, p.z); cc.push(...RCOL[rCls(p)].toArray()); });
+      const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3)); pg.setAttribute('color', new THREE.Float32BufferAttribute(cc, 3));
+      const pts = new THREE.Points(pg, new THREE.PointsMaterial({ size: 6, sizeAttenuation: false, vertexColors: true })); pts.userData.farOnly = 1500; routeG.add(pts); }
     const c = { bad: 0, warn: 0, ok: 0, none: 0 }; routePts.forEach(p => c[rCls(p)]++);
     const note = document.getElementById('routeNote');
-    note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น: <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none} ` +
-      `ขอบงานทาง = เส้นนอกสุดของแบบ (ตีความ) ระดับพื้นช่วงนอกหน้างานถือว่าเรียบ (ค่าสมมติ) เสาสูง 10 ม. เป็นค่าสมมติ ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
+    note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
+      `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา) อาคารสูง 4 ม. ` +
+      `ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
   }
   function setRoute(on) {
     routeG.visible = on; FOG.near = on ? 40000 : 450; FOG.far = on ? 80000 : 900; camera.far = on ? 60000 : 1200; camera.updateProjectionMatrix();
-    document.getElementById('routeOn').checked = on; document.getElementById('routeNote').hidden = !on; document.getElementById('kmGo').hidden = !on;
+    document.getElementById('routeOn').checked = on; document.getElementById('routeNote').hidden = !on; document.getElementById('kmGo').hidden = !on; document.getElementById('routeCadL').hidden = !on;
     if (on && !routeG.children.length) buildRoute();
   }
   if (RTE) {
@@ -1271,8 +1333,9 @@ table.ph th { color: var(--muted); font-weight: 600; }
     kmGo.innerHTML = '<option value="">ไปที่ กม. ...</option>' + RTE.R.kms.filter(k => k[2] % 1000 === 0).map(k => `<option value="${k[2]}">กม.${Math.floor(k[2] / 1000)}+000</option>`).join('');
     kmGo.addEventListener('change', () => { const k = RTE.R.kms.find(q => q[2] === +kmGo.value); kmGo.value = ''; if (!k) return;
       const [x, z] = RTE.toM(k[0] * RTE.S + RTE.R.E0, k[1] * RTE.S + RTE.R.N0), y = routeY(x, z);
-      views._km = [[x - 260, y + 170, z + 230], [x + 60, y, z]]; go('_km'); });
+      views._km = [[x - 70, y + 26, z + 60], [x + 40, y + 2, z]]; go('_km'); });
     document.getElementById('routeOn').addEventListener('change', e => setRoute(e.target.checked));
+    document.getElementById('routeCad').addEventListener('change', e => { const c = routeG.getObjectByName('cad'); if (c) c.visible = e.target.checked; });
   } else { document.getElementById('routeOn').disabled = true; document.getElementById('vroute').hidden = true; }
   const gisG = new THREE.Group(); scene.add(gisG); gisG.visible = false;
   function buildGIS() {
@@ -1501,7 +1564,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       camera.position.lerpVectors(tween.from, tween.to, e); controls.target.lerpVectors(tween.tf, tween.tt, e); if (tween.k >= 1) tween = null; }
     controls.update();
     { const now = performance.now(), dt = Math.min(0.05, (now - _last) / 1000); _last = now; if (WIND.on) windStep(dt); }
-    scene.traverse(o => { if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = SHOW_LBL && d > (o.userData.minD || 17); } });
+    scene.traverse(o => { if (o.isPoints && o.userData.farOnly) o.visible = camera.position.distanceTo(controls.target) > o.userData.farOnly; if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = SHOW_LBL && d > (o.userData.minD || 17); } });
     renderer.render(scene, camera); requestAnimationFrame(loop);
   })();
   window.__ready = true; window.__S = () => S; window.__cam = camera; window.__ctl = controls; window.__scene = scene;
