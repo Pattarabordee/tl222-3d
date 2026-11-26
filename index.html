@@ -302,6 +302,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <label id="routeCadL" hidden><input type="checkbox" id="routeCad"> <span style="background:#5b2a86"></span>เส้นแบบ CAD ของ ทล. (ตรวจเทียบ)</label>
         <label id="routeGisL" hidden>ปลอกสีเสาตาม <select id="routeCm"><option value="road">ผลตรวจแนวงานทาง</option><option value="gis">ผลเทียบ PEA GIS</option></select></label>
         <label id="routeGisxL" hidden><input type="checkbox" id="routeGisx"> <span style="background:#2f6fd0"></span>เสา PEA GIS ที่ ทล. ไม่ได้สำรวจ (สีตามแรงดัน ความสูงตาม GIS)</label>
+        <label id="routeSatL" hidden><input type="checkbox" id="routeSat" checked> <span style="background:#3f7d3a"></span>อาคาร/ต้นไม้จากภาพดาวเทียม (AI ตีกรอบ ข้างละ 80 ม.)</label>
         <label><input type="checkbox" id="satOn"> <span style="background:linear-gradient(90deg,#4d5b3a,#8a8f7a,#5d6b55)"></span>ภาพดาวเทียม (Esri World Imagery)</label>
         <p class="assume" id="satNote" hidden></p>
         <label><input type="checkbox" id="demOn"> <span style="background:linear-gradient(90deg,#a7c98a,#ece0ae,#cfa784)"></span>ภูมิประเทศ Copernicus DEM 30 ม. (เส้นชั้นความสูง 1 ม.)</label>
@@ -333,6 +334,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
 <script src="assets/doh_bridge.js"></script>
 <script src="assets/route_data.js"></script>
 <script src="assets/gis_match.js"></script>
+<script src="assets/sat_feat.js"></script>
 <script>
 (async function () {
   try { await document.fonts.load('600 40px "Sarabun"'); } catch (e) {}
@@ -1327,6 +1329,20 @@ table.ph th { color: var(--muted); font-weight: 600; }
     for (const b of R.bldgs) { const pts = []; for (let i = 0; i < b.length; i += 2) { const [x, z] = toM(b[i] * S + R.E0, b[i + 1] * S + R.N0); pts.push(new THREE.Vector2(x, -z)); }
       const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: 4, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, g0, 0);
       const m = new THREE.Mesh(g, [M(0xb5533c), M(0xe3ddd0)]); m.castShadow = true; routeG.add(m); }
+    // ---- buildings / tree canopies traced from Esri imagery by segment-geospatial LangSAM (tools/sat_segment.py); heights = ค่าสมมติ ----
+    const SF = window.SATF;
+    if (SF) { const sg = new THREE.Group(); sg.name = 'satf'; sg.visible = document.getElementById('routeSat').checked; routeG.add(sg);
+      const inSite = (x, z) => Math.abs(x) < 280 && Math.abs(z) < 190;
+      const add = (list, h0, h1, mtl) => { const far = [];
+        for (const b of list) { const pts = []; let cx = 0, cz = 0;
+          for (let i = 0; i < b.length; i += 2) { const [x, z] = toM(b[i] * S + R.E0, b[i + 1] * S + R.N0); pts.push(new THREE.Vector2(x, -z)); cx += x; cz += z; }
+          if (pts.length < 3) continue; cx /= pts.length; cz /= pts.length;
+          if (inSite(cx, cz)) { const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: h1 - h0, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, gy(cx, cz) + h0, 0); const m = new THREE.Mesh(g, mtl); m.castShadow = true; sg.add(m); }
+          else far.push(new THREE.Shape(pts)); }
+        if (far.length) { const g = new THREE.ExtrudeGeometry(far, { depth: h1 - h0, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, g0 + h0, 0); const m = new THREE.Mesh(g, mtl); m.castShadow = true; sg.add(m); } };
+      add(SF.bldg, 0, 4, new THREE.MeshLambertMaterial({ color: 0xd9a066 }));                           // อาคารสูง 4 ม. = ค่าสมมติ
+      add(SF.tree, 2.5, 7, new THREE.MeshLambertMaterial({ color: 0x3f7d3a, transparent: true, opacity: 0.85 }));   // ทรงพุ่ม 2.5–7 ม. = ค่าสมมติ
+    }
     // thin CAD lines of the design (optional, for checking against the drawing)
     const cad = new THREE.Group(); cad.name = 'cad'; cad.visible = document.getElementById('routeCad').checked;
     cad.add(lineSeg(R.layers.design, 0x5b2a86, false, g0 + EMB + 0.05)); cad.add(lineSeg(R.layers.edge, 0x7d6aa0, false, g0 + EMB + 0.05)); routeG.add(cad);
@@ -1382,11 +1398,12 @@ table.ph th { color: var(--muted); font-weight: 600; }
     note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
       (GM ? `ผลเทียบ PEA GIS (เลือก "ปลอกสีเสาตาม"): <b style="color:#2e8b57">ตรงกัน ≤ ${GM.tol[0]} ม. ${gc.gm}</b> · <b style="color:#a8861b">น่าจะต้นเดียวกัน ${GM.tol[0]}–${GM.tol[1]} ม. ${gc.gp}</b> · <b style="color:#c4651a">ไม่พบแต่สาย GIS ผ่าน ≤ ${GLN} ม. ${gc.gl}</b> · <b style="color:#c0262d">ไม่พบใน GIS ${gc.gn}</b> · เสา GIS ที่ ทล. ไม่ได้สำรวจ ${GM.x.length} ต้น (ม่วง 115 kV, น้ำเงิน 22 kV, เทา แรงต่ำ) เกณฑ์ระยะเป็นค่าสมมติ ${GM.src} ต้องยืนยันที่หน้างาน<br>` : '') +
       `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา) อาคารสูง 4 ม. ` +
+      (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง (ส้มอ่อน) และทรงพุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม (เขียว) ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> อาคารสูง 4 ม. ทรงพุ่มสูง 2.5–7 ม. Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
       `ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
   }
   function setRoute(on) {
     routeG.visible = on; FOG.near = on ? 40000 : 450; FOG.far = on ? 80000 : 900; camera.far = on ? 60000 : 1200; camera.updateProjectionMatrix();
-    document.getElementById('routeOn').checked = on; document.getElementById('routeNote').hidden = !on; document.getElementById('kmGo').hidden = !on; document.getElementById('routeCadL').hidden = !on; document.getElementById('routeGisL').hidden = document.getElementById('routeGisxL').hidden = !on || !GM;
+    document.getElementById('routeOn').checked = on; document.getElementById('routeNote').hidden = !on; document.getElementById('kmGo').hidden = !on; document.getElementById('routeCadL').hidden = !on; document.getElementById('routeGisL').hidden = document.getElementById('routeGisxL').hidden = !on || !GM; document.getElementById('routeSatL').hidden = !on || !window.SATF;
     if (on && !routeG.children.length) buildRoute();
   }
   if (RTE) {
@@ -1397,6 +1414,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       views._km = [[x - 70, y + 26, z + 60], [x + 40, y + 2, z]]; go('_km'); });
     document.getElementById('routeOn').addEventListener('change', e => setRoute(e.target.checked));
     document.getElementById('routeCad').addEventListener('change', e => { const c = routeG.getObjectByName('cad'); if (c) c.visible = e.target.checked; });
+    document.getElementById('routeSat').addEventListener('change', e => { const c = routeG.getObjectByName('satf'); if (c) c.visible = e.target.checked; });
     document.getElementById('routeCm').addEventListener('change', () => { if (routeG.children.length) buildRoute(); });
     document.getElementById('routeGisx').addEventListener('change', e => { const c = routeG.getObjectByName('gisx'); if (c) c.visible = e.target.checked; });
   } else { document.getElementById('routeOn').disabled = true; document.getElementById('vroute').hidden = true; }
