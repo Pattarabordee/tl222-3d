@@ -79,12 +79,14 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
       <button id="tHead" aria-pressed="true">หัวเสา</button>
       <button id="tWhole" aria-pressed="false">ทั้งต้น</button>
       <button id="tLbl" aria-pressed="true">ป้ายชื่อ</button>
+      <button id="tEx" aria-pressed="false" title="เลื่อนชิ้นส่วนออกจากกันเพื่อดูว่าประกอบด้วยอะไรบ้าง ระยะที่เลื่อนใช้ดูภาพเท่านั้น">แยกชิ้น</button>
     </div>
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
 <script src="assets/pea_parts.js"></script>
 <script>
 (async function () {
@@ -127,9 +129,11 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
   const sun = new THREE.DirectionalLight(0xffffff, 0.55); sun.position.set(20, 30, 25); scene.add(sun);
   const fill = new THREE.DirectionalLight(0xffffff, 0.25); fill.position.set(-25, 10, -15); scene.add(fill);
 
-  const Ph = (c, sh) => new THREE.MeshPhongMaterial({ color: c, shininess: sh, specular: 0x4a4a4a });
-  const MAT = { concrete: new THREE.MeshLambertMaterial({ color: 0xc4c2bb }), galv: Ph(0x9aa3a8, 45), porcelain: Ph(0x6e3b20, 80),
-    polymer: Ph(0x7d858a, 20), red: Ph(0xc0392b, 30), cable: new THREE.MeshLambertMaterial({ color: 0x1b1b1b }), alu: Ph(0xc9cdd0, 60),
+  // PBR materials lit by a studio environment (RoomEnvironment) like the site model's pretty mode; plain lights still work without it
+  if (THREE.RoomEnvironment) scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new THREE.RoomEnvironment(), 0.04).texture;
+  const S = (c, metalness, roughness, envMapIntensity = 0.6) => new THREE.MeshStandardMaterial({ color: c, metalness, roughness, envMapIntensity });
+  const MAT = { concrete: S(0xc4c2bb, 0, 0.9, 0.3), galv: S(0x9aa3a8, 0.85, 0.38, 1), porcelain: new THREE.MeshPhysicalMaterial({ color: 0x6e3b20, roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.15, envMapIntensity: 0.6 }),
+    polymer: S(0x7d858a, 0, 0.55), red: S(0xc0392b, 0, 0.45), cable: S(0x1b1b1b, 0, 0.5), alu: S(0xc9cdd0, 0.9, 0.3, 1),
     lamp: new THREE.MeshBasicMaterial({ color: 0xfff4cc }) };
   const edge = new THREE.LineBasicMaterial({ color: 0x1f2427, transparent: true, opacity: 0.55 });
 
@@ -139,8 +143,9 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
   for (const root of [...gl.scene.children]) {
     const labels = [];
     for (const o of [...root.children]) {
-      if (o.isMesh) { o.material = MAT[o.name.slice(root.name.length + 1)] || MAT.galv; o.add(new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 35), edge)); }
-      else { if (o.userData.t) labels.push({ text: o.userData.t, p: o.position.clone() }); root.remove(o); }
+      if (o.isMesh) { o.material = MAT[o.name.slice(root.name.length + 1)] || MAT.galv; o.add(new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 35), edge));
+        o.geometry.userData.base = o.geometry.attributes.position.array.slice(); }   // assembled positions; _ex = exploded-view offset (build_parts.py)
+      else { if (o.userData.t) labels.push({ text: o.userData.t, p: o.position.clone(), ex: new THREE.Vector3(...(o.userData.ex || [0, 0, 0])) }); root.remove(o); }
     }
     heads[root.name] = { root, labels, title: root.userData.title || root.name };
   }
@@ -162,7 +167,7 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
       s.position.set(0, I.h / 2, z); s.add(new THREE.LineSegments(new THREE.EdgesGeometry(s.geometry, 35), edge)); group.add(s);
     }
     head = hd.root.clone(); head.position.y = I.h; group.add(head);
-    frame();
+    setEx(0.5 - 0.5 * Math.cos(Math.PI * exT), true); frame();
     document.querySelectorAll('#list button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === name));
     const li = a => a.map(t => `<li>${t}</li>`).join('');
     document.getElementById('info').innerHTML = `<h2>${hd.title}</h2><p class="ref">${I.ref}</p>
@@ -176,7 +181,7 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
     if (whole) { head.traverse(o => { if (o.isMesh) box.expandByObject(o); }); box.expandByPoint(new THREE.Vector3(0, 0, 0)); }
     else {   // labelled parts + pole top; ignores long leads (e.g. the arrester ground wire) that would shrink the head
       const I = INFO[cur]; box.expandByPoint(new THREE.Vector3(0, I.h + 0.3, 0));
-      for (const l of heads[cur].labels) box.expandByPoint(l.p.clone().add(new THREE.Vector3(0, I.h, 0)));
+      for (const l of heads[cur].labels) for (const k of [0, 1]) box.expandByPoint(l.p.clone().addScaledVector(l.ex, k).add(new THREE.Vector3(0, I.h, 0)));
       box.expandByScalar(0.4);
     }
     const c = box.getCenter(new THREE.Vector3()), r = box.getSize(new THREE.Vector3()).length() / 2;
@@ -196,6 +201,19 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
   document.getElementById('tHead').onclick = () => { whole = false; tg('tHead', true); tg('tWhole', false); frame(); };
   document.getElementById('tWhole').onclick = () => { whole = true; tg('tHead', false); tg('tWhole', true); frame(); };
   document.getElementById('tLbl').onclick = () => { showLbl = !showLbl; tg('tLbl', showLbl); };
+  // exploded view: position = assembled + _ex * t; edges are hidden while moving and rebuilt when the move ends
+  let exT = 0, exTo = 0, tPrev = performance.now();
+  function setEx(t, done) {
+    for (const o of heads[cur].root.children) {
+      const g = o.geometry, ex = g && g.attributes._ex; if (!ex) continue;
+      const p = g.attributes.position, b = g.userData.base;
+      for (let i = 0; i < p.array.length; i++) p.array[i] = b[i] + ex.array[i] * t;
+      p.needsUpdate = true; g.computeBoundingSphere(); g.computeBoundingBox();
+    }
+    head.traverse(o => { if (!o.isLineSegments) return; o.visible = !!done;
+      if (done) { o.geometry.dispose(); o.geometry = new THREE.EdgesGeometry(o.parent.geometry, 35); } });
+  }
+  document.getElementById('tEx').onclick = () => { exTo = exTo ? 0 : 1; tg('tEx', !!exTo); };
 
   // leader labels: anchors projected to screen, boxes stacked in a column on the nearer side
   const svg = document.getElementById('lead'), coDiv = document.getElementById('co');
@@ -204,7 +222,7 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
     if (!showLbl || !cur) return;
     const W = stage.clientWidth, H = stage.clientHeight, I = INFO[cur], pts = [];
     for (const l of heads[cur].labels) {
-      const v = l.p.clone().add(new THREE.Vector3(0, I.h, 0)).project(camera);
+      const v = l.p.clone().addScaledVector(l.ex, 0.5 - 0.5 * Math.cos(Math.PI * exT)).add(new THREE.Vector3(0, I.h, 0)).project(camera);
       if (v.z > 1) continue;
       pts.push({ text: l.text, x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H });
     }
@@ -231,8 +249,10 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
   show(heads[first] ? first : 'T2314A');
   let last = '';
   (function loop() {
+    const now = performance.now(), dt = Math.min(now - tPrev, 100) / 600; tPrev = now;
+    if (exT !== exTo) { exT = exTo > exT ? Math.min(exTo, exT + dt) : Math.max(exTo, exT - dt); setEx(0.5 - 0.5 * Math.cos(Math.PI * exT), exT === exTo); }
     controls.update(); renderer.render(scene, camera);
-    const key = camera.position.toArray().map(v => v.toFixed(2)).join() + stage.clientWidth + 'x' + stage.clientHeight + showLbl + cur;
+    const key = camera.position.toArray().map(v => v.toFixed(2)).join() + stage.clientWidth + 'x' + stage.clientHeight + showLbl + cur + exT;
     if (key !== last) { last = key; callouts(); }
     requestAnimationFrame(loop);
   })();

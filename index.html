@@ -112,6 +112,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       <button id="vroute">ทั้งแนวถนน</button>
       <select id="kmGo" aria-label="ไปที่ กม." hidden></select>
       <button id="lblOn" aria-pressed="true" title="เปิด/ปิดป้ายชื่อในโมเดล">ป้ายชื่อ</button>
+      <button id="prettyOn" aria-pressed="false" title="วัสดุ PBR แสงสะท้อนจากท้องฟ้า เงานุ่ม (ปิดถ้าเครื่องช้า)">โหมดสวย</button>
       <button id="vroad">มองตามถนน</button>
       <button id="vside">มองข้ามห้วย</button>
       <button id="v22">มองแนว 22 kV</button>
@@ -299,6 +300,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <label><input type="checkbox" id="routeOn"> <span style="background:#5b2a86"></span>แนวถนนทั้งโครงการ กม.4+800–25+800 (DWG ทล.) และเสาไฟฟ้าที่ ทล. สำรวจ</label>
         <p class="assume" id="routeNote" hidden></p>
         <label id="routeCadL" hidden><input type="checkbox" id="routeCad"> <span style="background:#5b2a86"></span>เส้นแบบ CAD ของ ทล. (ตรวจเทียบ)</label>
+        <label id="routeGisL" hidden>ปลอกสีเสาตาม <select id="routeCm"><option value="road">ผลตรวจแนวงานทาง</option><option value="gis">ผลเทียบ PEA GIS</option></select></label>
+        <label id="routeGisxL" hidden><input type="checkbox" id="routeGisx"> <span style="background:#2f6fd0"></span>เสา PEA GIS ที่ ทล. ไม่ได้สำรวจ (สีตามแรงดัน ความสูงตาม GIS)</label>
         <label><input type="checkbox" id="satOn"> <span style="background:linear-gradient(90deg,#4d5b3a,#8a8f7a,#5d6b55)"></span>ภาพดาวเทียม (Esri World Imagery)</label>
         <p class="assume" id="satNote" hidden></p>
         <label><input type="checkbox" id="demOn"> <span style="background:linear-gradient(90deg,#a7c98a,#ece0ae,#cfa784)"></span>ภูมิประเทศ Copernicus DEM 30 ม. (เส้นชั้นความสูง 1 ม.)</label>
@@ -329,6 +332,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
 <script src="assets/pea_parts.js"></script>
 <script src="assets/doh_bridge.js"></script>
 <script src="assets/route_data.js"></script>
+<script src="assets/gis_match.js"></script>
 <script>
 (async function () {
   try { await document.fonts.load('600 40px "Sarabun"'); } catch (e) {}
@@ -390,7 +394,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 1200);
   const controls = new THREE.OrbitControls(camera, canvas);
   controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.53;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x6f7d5a, 0.75));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x6f7d5a, 0.75); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffffff, 0.75);
   sun.position.set(-60, 90, 50); sun.castShadow = true;
   Object.assign(sun.shadow.camera, { left: -200, right: 200, top: 200, bottom: -200, far: 450 });
@@ -421,6 +425,39 @@ table.ph th { color: var(--muted); font-weight: 600; }
     red: Ph(0xc0392b, 30), cable: M(0x1b1b1b), alu: Ph(0xc9cdd0, 60), lamp: new THREE.MeshBasicMaterial({ color: 0xfff4cc }),
     beam: M(0xd2cfc6), slab: M(0x8b8f8c), walk: M(0xbdbab2), barrier: M(0xe6e5df), rail: Ph(0x9aa3a8, 40), sub: M(0xb0aea6), pile: M(0x85827a), approach: M(0x9a9e9a) };
   const edgeMat = new THREE.LineBasicMaterial({ color: 0x262b2e, transparent: true, opacity: 0.45 });
+
+  // ---------- โหมดสวย: วัสดุ PBR (Standard/Physical) + แสงสะท้อนจากท้องฟ้า (env map) + เงานุ่ม ปิดได้ถ้าเครื่องช้า ----------
+  // ใช้แทนวัสดุ Lambert/Phong เดิมตอนแสดงผล (สลับใน render loop) ขนาดและสีของชิ้นส่วนไม่เปลี่ยน
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  let PRETTY = !matchMedia('(pointer: coarse)').matches;   // มือถือเริ่มแบบเรียบ
+  const ENV = (() => { const s = new THREE.Scene(), g = new THREE.SphereGeometry(50, 32, 16), c = [], p = g.attributes.position;
+    const top = new THREE.Color(0x4f6f8f), hor = new THREE.Color(0x9aa6ad), gnd = new THREE.Color(0x3c4632);
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 50; c.push(...(y > 0 ? hor.clone().lerp(top, Math.pow(y, 0.6)) : hor.clone().lerp(gnd, Math.min(1, -y * 4))).toArray()); }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
+    s.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+    const sunM = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5, 2.5, 2.3) })); sunM.position.set(-25, 35, 20); s.add(sunM);
+    return new THREE.PMREMGenerator(renderer).fromScene(s, 0.02).texture; })();
+  const noiseTex = (() => { const n = 256, cv = document.createElement('canvas'); cv.width = cv.height = n; const x = cv.getContext('2d'), d = x.createImageData(n, n);
+    for (let i = 0; i < n * n; i++) { const v = 128 + (Math.random() - 0.5) * 90; d.data.set([v, v, v, 255], i * 4); } x.putImageData(d, 0, 0);
+    const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
+  const PBR = new Map([[PART_MAT.galv, { metalness: .85, roughness: .38 }], [PART_MAT.rail, { metalness: .85, roughness: .4 }], [PART_MAT.alu, { metalness: .9, roughness: .3 }],
+    [PART_MAT.porcelain, { physical: true, roughness: .3, clearcoat: .6, clearcoatRoughness: .15 }], [PART_MAT.polymer, { roughness: .55 }], [PART_MAT.red, { roughness: .45 }],
+    [PART_MAT.cable, { roughness: .5 }], [mat.steel, { metalness: .8, roughness: .4 }], [mat.arm, { metalness: .7, roughness: .45 }], [mat.water, { roughness: .08, metalness: .1 }]]);
+  for (const m of [PART_MAT.concrete, PART_MAT.beam, PART_MAT.slab, PART_MAT.walk, PART_MAT.barrier, PART_MAT.sub, PART_MAT.pile, PART_MAT.approach, mat.pole, mat.pier, mat.oldDeck, mat.road, mat.roadDS, mat.rail])
+    PBR.set(m, { roughness: .92, bumpMap: noiseTex, bumpScale: .015 });   // คอนกรีตผิวหยาบ
+  const TO_PBR = new WeakMap(), FROM_PBR = new WeakMap();
+  const pbr = m => { if (!(m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return m; let p = TO_PBR.get(m); if (p) return p;
+    const o = PBR.get(m) || {}, K = o.physical ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+    p = new K({ color: m.color, map: m.map, vertexColors: m.vertexColors, transparent: m.transparent, opacity: m.opacity, side: m.side, depthWrite: m.depthWrite,
+      polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits,
+      roughness: o.roughness ?? (m.isMeshPhongMaterial ? Math.max(.2, 1 - m.shininess / 100) : .95), metalness: o.metalness ?? 0,
+      envMapIntensity: o.metalness ? 1 : o.physical ? .6 : .2 });   // ผิวด้านรับแสงฟ้าน้อย ไม่ให้พื้นซีด (ไม่มี tone mapping)
+    if (o.bumpMap) Object.assign(p, { bumpMap: o.bumpMap, bumpScale: o.bumpScale });
+    if (o.physical) Object.assign(p, { clearcoat: o.clearcoat, clearcoatRoughness: o.clearcoatRoughness });
+    TO_PBR.set(m, p); FROM_PBR.set(p, m); return p; };
+  const setPretty = on => { PRETTY = on; scene.environment = on ? ENV : null; hemi.intensity = on ? .5 : .75; sun.intensity = on ? .9 : .75;
+    document.getElementById('prettyOn').setAttribute('aria-pressed', String(on)); };
+  document.getElementById('prettyOn').addEventListener('click', () => setPretty(!PRETTY)); setPretty(PRETTY);
   async function loadGLB(b64, edgeAngle) {
     if (!b64 || !THREE.GLTFLoader) return null;
     try {
@@ -485,8 +522,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
   let REC = false; const CONDS = [];                     // conductors drawn by buildPoles (for the piling-rig check)
   function wire(a, b, sag, m, r = 0.05) {
     if (REC && (m === lineMat.hv || m === lineMat.acsr || m === lineMat.sac)) CONDS.push({ a, b, sag, kv: m === lineMat.hv ? 115 : 22, name: m === lineMat.hv ? '115 kV' : m === lineMat.sac ? '22 kV SAC' : '22 kV' });
-    const pts = []; for (let i = 0; i <= 32; i++) pts.push(spanPt(a, b, sag, i / 32));
-    const mesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, r, 5), m);
+    const pts = []; const n = Math.max(32, Math.min(128, Math.ceil(a.distanceTo(b) / 2))); for (let i = 0; i <= n; i++) pts.push(spanPt(a, b, sag, i / n));
+    const mesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n, r, 12), m);
     regWire(mesh, a, b, sag, m === lineMat.hv || m === lineMat.neuHv ? 115 : 22);
     return mesh;
   }
@@ -1017,7 +1054,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   function encDraw(p, parent) {   // red overlay on the encroaching part of a conductor + a label at the middle of the longest run
     const runs = p.c.enc, bad = runs.some(e => e.k !== 'road');   // a conductor that encroaches anywhere is red over its whole span
     (bad ? [{ k: 'over', t0: 0, t1: 1 }] : runs).forEach(e => { const pts = []; for (let i = 0; i <= 24; i++) pts.push(spanPt(p.a, p.b, p.sag, e.t0 + (e.t1 - e.t0) * i / 24));
-      const ov = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.14, 6), e.k === 'road' ? lineMat.encRoad : lineMat.enc);
+      const ov = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.14, 12), e.k === 'road' ? lineMat.encRoad : lineMat.enc);
       regWire(ov, p.a, p.b, p.sag, p.kind === 'ACSR' || p.kind === 'SAC' ? 22 : 115); parent.add(ov); });
     const L = runs.filter(e => e.k !== 'road').sort((u, v) => Math.abs(v.x1 - v.x0) - Math.abs(u.x1 - u.x0))[0];
     if (L) { const m = spanPt(p.a, p.b, p.sag, (L.t0 + L.t1) / 2);
@@ -1219,6 +1256,15 @@ table.ph th { color: var(--muted); font-weight: 600; }
   let routeInst = null, routePts = null;
   const RCOL = { bad: new THREE.Color(0xc0262d), warn: new THREE.Color(0xe5934d), ok: new THREE.Color(0x1f9a55), none: new THREE.Color(0x8a8f8c) };
   const rCls = p => p.edge == null ? 'none' : Math.abs(p.off) <= p.edge ? 'bad' : Math.abs(p.off) <= p.edge + P.low ? 'warn' : 'ok';
+  // ผลเทียบ PEA GIS (assets/gis_match.js จาก tools/gis_match.py): ตรงกัน / น่าจะต้นเดียวกัน / ไม่พบแต่สาย GIS ผ่าน ≤ 2 ม. / ไม่พบ
+  const GM = window.GISM || null, GLN = 2.0;
+  const gCls = p => !p.gm ? 'none' : p.gm[0] === 0 ? 'gm' : p.gm[0] === 1 ? 'gp' : p.gm[4] <= GLN ? 'gl' : 'gn';
+  const GCOL = { gm: new THREE.Color(0x2e8b57), gp: new THREE.Color(0xc9a227), gl: new THREE.Color(0xe07b24), gn: new THREE.Color(0xc0262d), none: new THREE.Color(0x8a8f8c) };
+  const GNM = { gm: 'ตรงกับ GIS', gp: 'น่าจะต้นเดียวกัน', gl: 'ไม่พบใน GIS แต่สาย GIS ผ่าน', gn: 'ไม่พบใน GIS', none: '-' };
+  const GVN = ['', '115 kV', '22 kV', 'แรงต่ำ'], GVC = [0x8a8f8c, 0x7b3fa0, 0x2f6fd0, 0x5f6b66];
+  const gTxt = p => !p.gm ? '' : p.gm[0] < 2 ? `PEA GIS: ${GNM[gCls(p)]} ห่าง ${fmt(p.gm[1])} ม. ${GVN[p.gm[2]]} เสา ${p.gm[3]} ม.`
+    : `PEA GIS: ${GNM[gCls(p)]} (เสา GIS ใกล้สุด ${fmt(p.gm[1])} ม., สาย ${GVN[p.gm[5]]} ห่าง ${fmt(p.gm[4])} ม.)`;
+  const rCol = p => document.getElementById('routeCm').value === 'gis' ? GCOL[gCls(p)] : RCOL[rCls(p)];
   function buildRoute() {
     routeG.clear(); if (!RTE) return;
     const { R, S, toM } = RTE, T = R.tpl, EMB = 0.6, g0 = P.g0 - 100;   // embankment height 0.6 m = ค่าสมมติ
@@ -1251,6 +1297,12 @@ table.ph th { color: var(--muted); font-weight: 600; }
     }
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); rg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); rg.computeVertexNormals();
     const road = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); road.receiveShadow = true; routeG.add(road);
+    // far view: the 25 m road is under a pixel from 10 km, so draw a wide ribbon (±100 m, display only) when zoomed out
+    { const fp = [], W2 = 100; for (let i = 0; i < st.length - 4; i += 4) { const a = st[i], b = st[i + 4], ya = topY(a) + 0.4, yb = topY(b) + 0.4;
+        const A0 = [a.x - a.nx * W2, ya, a.z - a.nz * W2], A1 = [a.x + a.nx * W2, ya, a.z + a.nz * W2], B0 = [b.x - b.nx * W2, yb, b.z - b.nz * W2], B1 = [b.x + b.nx * W2, yb, b.z + b.nz * W2];
+        fp.push(...A0, ...B0, ...A1, ...A1, ...B0, ...B1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(fp, 3));
+      const far = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0x3d4246, side: THREE.DoubleSide })); far.userData.farOnly = 1500; far.visible = false; routeG.add(far); }
     // ---- markings: white edge lines, dashed lane lines (3 m / 6 m) ----
     const mk = [], mkY = [];
     const quad = (a, b, oa, ob, w, y) => { const A0 = [a.x + a.nx * (oa - w), y, a.z + a.nz * (oa - w)], A1 = [a.x + a.nx * (oa + w), y, a.z + a.nz * (oa + w)],
@@ -1292,7 +1344,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     // ---- surveyed poles: 12 m square PC poles (8103 widths, height ค่าสมมติ), crossarm across the road, 3 insulators, class collar ----
     const n = R.poles.length, H = 10.2;
     routePts = R.poles.map((q, i) => { const [x, z] = toM(q[0] * S + R.E0, q[1] * S + R.N0); const s2 = st.reduce((b, c) => Math.hypot(c.x - x, c.z - z) < Math.hypot(b.x - x, b.z - z) ? c : b, st[0]);
-      const ax = Math.abs(x); return { i: i + 1, x, z, y: ax < 280 && Math.abs(z) < 190 ? gy(x, z) : g0, sta: q[2], off: q[3], edge: q[4], row: q[5], ry: Math.atan2(-s2.tz, s2.tx) }; });
+      const ax = Math.abs(x); return { i: i + 1, x, z, y: ax < 280 && Math.abs(z) < 190 ? gy(x, z) : g0, sta: q[2], off: q[3], edge: q[4], row: q[5], ry: Math.atan2(-s2.tz, s2.tx), gm: GM && GM.m[i] }; });
     const shaft = new THREE.CylinderGeometry(POLE_W.p12[0] / Math.SQRT2, POLE_W.p12[1] / Math.SQRT2, H, 4, 1).rotateY(Math.PI / 4).translate(0, H / 2, 0);
     const arm = new THREE.BoxGeometry(0.1, 0.1, 2.4).translate(0, H - 0.35, 0);
     const ins = new THREE.CylinderGeometry(0.05, 0.07, 0.22, 8).translate(0, H - 0.18, 0);
@@ -1300,7 +1352,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const iShaft = new THREE.InstancedMesh(shaft, PART_MAT.concrete, n), iArm = new THREE.InstancedMesh(arm, PART_MAT.galv, n), iIns = new THREE.InstancedMesh(ins, PART_MAT.porcelain, n * 3), iCol = new THREE.InstancedMesh(collar, new THREE.MeshLambertMaterial({ color: 0xffffff }), n);
     const m4 = new THREE.Matrix4(), qt = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);
     routePts.forEach((p, i) => { qt.setFromAxisAngle(up, p.ry); m4.compose(V(p.x, p.y, p.z), qt, one);
-      iShaft.setMatrixAt(i, m4); iArm.setMatrixAt(i, m4); iCol.setMatrixAt(i, m4); iCol.setColorAt(i, RCOL[rCls(p)]);
+      iShaft.setMatrixAt(i, m4); iArm.setMatrixAt(i, m4); iCol.setMatrixAt(i, m4); iCol.setColorAt(i, rCol(p));
       [-0.95, 0, 0.95].forEach((d, k) => { const o = V(p.x - Math.sin(p.ry) * 0 + Math.sin(p.ry) * d * 0, p.y, p.z); const off = V(0, 0, d).applyQuaternion(qt); m4.compose(o.add(off), qt, one); iIns.setMatrixAt(i * 3 + k, m4); }); });
     for (const im of [iShaft, iArm, iIns, iCol]) { im.castShadow = true; routeG.add(im); }
     routeInst = iShaft;
@@ -1314,18 +1366,27 @@ table.ph th { color: var(--muted); font-weight: 600; }
           let prev = A; for (let k = 1; k <= 8; k++) { const t = k / 8, P2 = V(A.x + (B.x - A.x) * t, A.y + (B.y - A.y) * t - 4 * sag * t * (1 - t), A.z + (B.z - A.z) * t); w.push(prev.x, prev.y, prev.z, P2.x, P2.y, P2.z); prev = P2; } } }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(w, 3)); routeG.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x4a3a22 }))); }
     // dots for the far view
-    { const pp = [], cc = []; routePts.forEach(p => { pp.push(p.x, p.y + H + 0.8, p.z); cc.push(...RCOL[rCls(p)].toArray()); });
+    { const pp = [], cc = []; routePts.forEach(p => { pp.push(p.x, p.y + H + 0.8, p.z); cc.push(...rCol(p).toArray()); });
       const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3)); pg.setAttribute('color', new THREE.Float32BufferAttribute(cc, 3));
       const pts = new THREE.Points(pg, new THREE.PointsMaterial({ size: 6, sizeAttenuation: false, vertexColors: true })); pts.userData.farOnly = 1500; routeG.add(pts); }
+    // PEA GIS poles the DOH survey has no match for: square poles at GIS height (8/9/12/22 m), colour by voltage
+    if (GM) { const gx = new THREE.Group(); gx.name = 'gisx'; gx.visible = document.getElementById('routeGisx').checked; routeG.add(gx);
+      for (const v of [1, 2, 3]) { const L = GM.x.filter(q => q[2] === v); if (!L.length) continue;
+        const im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.2, 1, 4, 1).rotateY(Math.PI / 4).translate(0, 0.5, 0), new THREE.MeshLambertMaterial({ color: GVC[v] }), L.length);
+        L.forEach((q, k) => { const [x, z] = toM(q[0] * S + R.E0, q[1] * S + R.N0), h = (q[3] || 12) - (q[3] >= 22 ? 2.0 : q[3] >= 12 ? 1.8 : 1.5);   // ความลึกฝัง 2.0/1.8/1.5 ม. = ค่าสมมติ
+          m4.compose(V(x, Math.abs(x) < 280 && Math.abs(z) < 190 ? gy(x, z) : g0, z), new THREE.Quaternion(), V(1, h, 1)); im.setMatrixAt(k, m4); });
+        gx.add(im); } }
     const c = { bad: 0, warn: 0, ok: 0, none: 0 }; routePts.forEach(p => c[rCls(p)]++);
+    const gc = { gm: 0, gp: 0, gl: 0, gn: 0, none: 0 }; routePts.forEach(p => gc[gCls(p)]++);
     const note = document.getElementById('routeNote');
     note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
+      (GM ? `ผลเทียบ PEA GIS (เลือก "ปลอกสีเสาตาม"): <b style="color:#2e8b57">ตรงกัน ≤ ${GM.tol[0]} ม. ${gc.gm}</b> · <b style="color:#a8861b">น่าจะต้นเดียวกัน ${GM.tol[0]}–${GM.tol[1]} ม. ${gc.gp}</b> · <b style="color:#c4651a">ไม่พบแต่สาย GIS ผ่าน ≤ ${GLN} ม. ${gc.gl}</b> · <b style="color:#c0262d">ไม่พบใน GIS ${gc.gn}</b> · เสา GIS ที่ ทล. ไม่ได้สำรวจ ${GM.x.length} ต้น (ม่วง 115 kV, น้ำเงิน 22 kV, เทา แรงต่ำ) เกณฑ์ระยะเป็นค่าสมมติ ${GM.src} ต้องยืนยันที่หน้างาน<br>` : '') +
       `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา) อาคารสูง 4 ม. ` +
       `ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
   }
   function setRoute(on) {
     routeG.visible = on; FOG.near = on ? 40000 : 450; FOG.far = on ? 80000 : 900; camera.far = on ? 60000 : 1200; camera.updateProjectionMatrix();
-    document.getElementById('routeOn').checked = on; document.getElementById('routeNote').hidden = !on; document.getElementById('kmGo').hidden = !on; document.getElementById('routeCadL').hidden = !on;
+    document.getElementById('routeOn').checked = on; document.getElementById('routeNote').hidden = !on; document.getElementById('kmGo').hidden = !on; document.getElementById('routeCadL').hidden = !on; document.getElementById('routeGisL').hidden = document.getElementById('routeGisxL').hidden = !on || !GM;
     if (on && !routeG.children.length) buildRoute();
   }
   if (RTE) {
@@ -1336,6 +1397,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       views._km = [[x - 70, y + 26, z + 60], [x + 40, y + 2, z]]; go('_km'); });
     document.getElementById('routeOn').addEventListener('change', e => setRoute(e.target.checked));
     document.getElementById('routeCad').addEventListener('change', e => { const c = routeG.getObjectByName('cad'); if (c) c.visible = e.target.checked; });
+    document.getElementById('routeCm').addEventListener('change', () => { if (routeG.children.length) buildRoute(); });
+    document.getElementById('routeGisx').addEventListener('change', e => { const c = routeG.getObjectByName('gisx'); if (c) c.visible = e.target.checked; });
   } else { document.getElementById('routeOn').disabled = true; document.getElementById('vroute').hidden = true; }
   const gisG = new THREE.Group(); scene.add(gisG); gisG.visible = false;
   function buildGIS() {
@@ -1432,7 +1495,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     if (routeG.visible && routeInst) { const h = ray.intersectObject(routeInst)[0];
       if (h && h.instanceId != null) { const p = routePts[h.instanceId], CN = { bad: 'อยู่ในแนวงานทาง', warn: 'ใกล้ขอบงานทาง', ok: 'พ้นแนวงานทาง', none: 'ไม่มีแบบตรงนั้น' };
         if (routeG.userData.tag) routeG.remove(routeG.userData.tag);
-        routeG.userData.tag = put(routeG, `P${p.i} กม.${Math.floor(p.sta / 1000)}+${String(Math.round(p.sta % 1000)).padStart(3, '0')} ${p.off >= 0 ? 'RT.' : 'LT.'} ห่าง CL ${f2(Math.abs(p.off))} ม. ขอบงานทาง ${f2(p.edge ?? NaN)} ม. · ${CN[rCls(p)]}`,
+        routeG.userData.tag = put(routeG, `P${p.i} กม.${Math.floor(p.sta / 1000)}+${String(Math.round(p.sta % 1000)).padStart(3, '0')} ${p.off >= 0 ? 'RT.' : 'LT.'} ห่าง CL ${f2(Math.abs(p.off))} ม. ขอบงานทาง ${f2(p.edge ?? NaN)} ม. · ${CN[rCls(p)]}${p.gm ? ' · ' + gTxt(p) : ''}`,
           p.x, p.y + 13, p.z, rCls(p) === 'bad' ? BAD : rCls(p) === 'warn' ? WARN : NEW);
         views._rp = [[p.x - 28, p.y + 16, p.z + 24], [p.x, p.y + 5, p.z]]; go('_rp'); return; } }
     for (const hit of ray.intersectObjects(POLES, true)) { let o = hit.object; while (o && !(o.userData && o.userData.pole)) o = o.parent;
@@ -1564,7 +1627,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       camera.position.lerpVectors(tween.from, tween.to, e); controls.target.lerpVectors(tween.tf, tween.tt, e); if (tween.k >= 1) tween = null; }
     controls.update();
     { const now = performance.now(), dt = Math.min(0.05, (now - _last) / 1000); _last = now; if (WIND.on) windStep(dt); }
-    scene.traverse(o => { if (o.isPoints && o.userData.farOnly) o.visible = camera.position.distanceTo(controls.target) > o.userData.farOnly; if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = SHOW_LBL && d > (o.userData.minD || 17); } });
+    scene.traverse(o => { if (o.isMesh) { const w = PRETTY ? pbr(o.material) : (FROM_PBR.get(o.material) || o.material); if (w !== o.material) o.material = w; }
+      if (o.userData.farOnly) o.visible = camera.position.distanceTo(controls.target) > o.userData.farOnly; if (o.isSprite) { const d = o.getWorldPosition(_v).distanceTo(camera.position); o.visible = SHOW_LBL && d > (o.userData.minD || 17); } });
     renderer.render(scene, camera); requestAnimationFrame(loop);
   })();
   window.__ready = true; window.__S = () => S; window.__cam = camera; window.__ctl = controls; window.__scene = scene;

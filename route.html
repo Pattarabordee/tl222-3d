@@ -83,11 +83,13 @@ tr.click:hover { background: color-mix(in srgb, var(--accent) 10%, transparent);
     <div class="calc">
       <label for="mg">ระยะเผื่อจากขอบงานทาง (ม.) ค่าสมมติ</label><input id="mg" type="number" step="0.1" value="1.5">
       <label for="rt">ระยะยอมเกินแนว R.O.W. (ม.)</label><input id="rt" type="number" step="0.1" value="0">
+      <label for="cm">สีเสาตาม</label><select id="cm"><option value="road">ผลตรวจแนวงานทาง</option><option value="gis">ผลเทียบ PEA GIS</option></select>
     </div>
     <p class="note"><span class="lg" style="background:var(--bad)"></span>อยู่ในแนวงานทาง (ห่าง CL ไม่เกินเส้นนอกสุดของแบบ) ·
       <span class="lg" style="background:var(--warn)"></span>ห่างขอบงานทางไม่เกินระยะเผื่อ ·
       <span class="lg" style="background:var(--ok)"></span>พ้นแนวงานทาง · <span class="lg" style="background:#8a8f8c"></span>ไม่มีแบบตรงนั้น ·
       วงแหวนน้ำเงิน = อยู่นอกแนว R.O.W. เดิม</p>
+    <p class="note" id="gisLg"></p>
     <h2>ชั้นข้อมูล</h2>
     <div id="layers"></div>
     <h2>สรุปรายกิโลเมตร</h2>
@@ -95,11 +97,18 @@ tr.click:hover { background: color-mix(in srgb, var(--accent) 10%, transparent);
     <h2>เสาที่ต้องตรวจ (คลิกเพื่อซูม)</h2>
     <div class="list"><table id="pT"></table></div>
     <p style="margin:10px 0"><button id="bCsv">ดาวน์โหลดตารางเสา (CSV)</button></p>
+    <div id="ngBox" hidden>
+      <h2 id="ngH">เสาในแนวงานทางที่ไม่พบใน PEA GIS</h2>
+      <p class="note" id="ngN"></p>
+      <div class="list"><table id="ngT"></table></div>
+      <p style="margin:10px 0"><button id="bNg">ดาวน์โหลดรายการนี้ (CSV)</button></p>
+    </div>
     <p class="note" id="src"></p>
     <p class="note">วิธีคิด: แนว CL ออกแบบ = กึ่งกลางเส้นคู่ยาว 21.5 กม. ในชั้น Design ระยะ กม. เทียบกับป้าย กม. ในแบบ (ต่างจากป้ายกลาง <span id="cal"></span> ม.) ระยะของเสาวัดตั้งฉากจาก CL (บวก = ขวาทาง RT.) ขอบงานทาง = เส้นนอกสุดของชั้น Design ด้านเดียวกับเสา (ตีความจากแบบ ยังไม่รวมลาดคันทาง/คูน้ำ ต้องยืนยันกับ ทล.) R.O.W. = แนวเขตทางเดิมในงานสำรวจ บริเวณสะพาน กม.6+085 มีเพียงแนว CL และ R.O.W. แบบถนนช่วงนั้นดูในโมเดล 3D</p>
   </aside>
 </div>
 <script src="assets/route_data.js"></script>
+<script src="assets/gis_match.js"></script>
 <script>
 (function () {
   const R = window.ROUTE, S = R.scale;
@@ -107,7 +116,9 @@ tr.click:hover { background: color-mix(in srgb, var(--accent) 10%, transparent);
   const L = {}; for (const k in R.layers) L[k] = R.layers[k].map(dec);
   const CL = dec(R.cl);
   const site = [R.site[0] * S, R.site[1] * S];
-  const poles = R.poles.map((p, i) => ({ i: i + 1, x: p[0] * S, y: p[1] * S, sta: p[2], off: p[3], edge: p[4], row: p[5] }));
+  const G = window.GISM || null;   // ผลจับคู่กับ PEA GIS (tools/gis_match.py) ไม่มีไฟล์ = ซ่อนส่วน GIS
+  const poles = R.poles.map((p, i) => ({ i: i + 1, x: p[0] * S, y: p[1] * S, sta: p[2], off: p[3], edge: p[4], row: p[5], gm: G && G.m[i] }));
+  const gisx = G ? G.x.map(q => ({ x: q[0] * S, y: q[1] * S, v: q[2], h: q[3] })) : [];
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const fmtSta = s => `${Math.floor(s / 1000)}+${String(Math.round(s % 1000)).padStart(3, '0')}`;
   const f1 = v => v == null || isNaN(v) ? '-' : v.toFixed(1), f2 = v => v == null || isNaN(v) ? '-' : v.toFixed(2);
@@ -144,6 +155,7 @@ tr.click:hover { background: color-mix(in srgb, var(--accent) 10%, transparent);
     recheck: { n: 'กรอบ Recheck ในแบบ', c: '#d07a1a', w: 1, on: false },
     cl: { n: 'แนว CL ออกแบบ + กม.', c: '#c0262d', w: 1, on: true }, poles: { n: 'เสาไฟฟ้าที่สำรวจ (1,086 ต้น)', on: true },
   };
+  if (G) STY.gisx = { n: `เสา PEA GIS ที่ ทล. ไม่ได้สำรวจ (${gisx.length} ต้น, สี่เหลี่ยม)`, on: false };
   const ORDER = ['exroad', 'excl', 'water', 'bridge', 'bldg', 'fence', 'drain', 'design', 'edge', 'lane', 'recheck', 'row'];
   document.getElementById('layers').innerHTML = Object.entries(STY).map(([k, s]) => `<label class="row"><input type="checkbox" data-l="${k}" ${s.on ? 'checked' : ''}>${s.c ? `<span class="lg" style="border-radius:2px;height:4px;background:${s.c}"></span>` : ''}${s.n}</label>`).join('');
   document.querySelectorAll('#layers input').forEach(i => i.addEventListener('change', () => { STY[i.dataset.l].on = i.checked; if (i.dataset.l === 'sat') document.getElementById('bSat').setAttribute('aria-pressed', String(i.checked)); draw(); }));
@@ -153,6 +165,16 @@ tr.click:hover { background: color-mix(in srgb, var(--accent) 10%, transparent);
   const cls = p => p.edge == null ? 'none' : Math.abs(p.off) <= p.edge ? 'bad' : Math.abs(p.off) <= p.edge + MG ? 'warn' : 'ok';
   const outRow = p => p.row != null && Math.abs(p.off) > p.row + RT;
   const COL = () => ({ bad: css('--bad'), warn: css('--warn'), ok: css('--ok'), none: '#8a8f8c' });
+  // ผลเทียบ PEA GIS: ตรงกัน / น่าจะต้นเดียวกัน / ไม่พบแต่มีสาย GIS ผ่าน ≤ 2 ม. / ไม่พบ
+  let CM = 'road';
+  const LINE_NEAR = 2.0;
+  const gcls = p => !p.gm ? 'none' : p.gm[0] === 0 ? 'gm' : p.gm[0] === 1 ? 'gp' : p.gm[4] <= LINE_NEAR ? 'gl' : 'gn';
+  const GC = { gm: '#2e8b57', gp: '#c9a227', gl: '#e07b24', gn: '#c0262d', none: '#8a8f8c' };
+  const GN = { gm: 'ตรงกับ GIS', gp: 'น่าจะต้นเดียวกัน', gl: 'ไม่พบใน GIS แต่สาย GIS ผ่าน', gn: 'ไม่พบใน GIS', none: '-' };
+  const VN = ['', '115 kV', '22 kV', 'แรงต่ำ'], VCOL = ['#8a8f8c', '#7b3fa0', '#2f6fd0', '#5f6b66'];
+  const gdesc = p => !p.gm ? '' : p.gm[0] < 2 ? `PEA GIS: ${GN[gcls(p)]} (ห่าง ${f1(p.gm[1])} ม.) ${VN[p.gm[2]]} เสา ${p.gm[3]} ม.`
+    : `PEA GIS: ${GN[gcls(p)]} (เสา GIS ใกล้สุด ${f1(p.gm[1])} ม., สาย ${VN[p.gm[5]]} ห่าง ${f1(p.gm[4])} ม.)`;
+  const pcol = p => CM === 'gis' ? GC[gcls(p)] : COL()[cls(p)];
 
   // ---------- satellite tiles ----------
   const TILE = {};
@@ -208,9 +230,12 @@ tr.click:hover { background: color-mix(in srgb, var(--accent) 10%, transparent);
       g.font = '700 13px Sarabun, sans-serif'; g.fillStyle = sat ? '#fff' : css('--accent'); g.fillText('สะพาน กม.6+085 (งานรื้อย้ายปัจจุบัน)', X + 14, Y); }
     if (STY.poles.on) { const C = COL(), r = Math.max(3, Math.min(7, 0.6 * V.s));
       for (const p of poles) { const X = sx(p.x), Y = sy(p.y); if (X < -10 || X > W + 10 || Y < -10 || Y > H + 10) continue;
-        g.fillStyle = C[cls(p)]; g.beginPath(); g.arc(X, Y, r, 0, 7); g.fill(); g.lineWidth = 1; g.strokeStyle = sat ? '#fff' : 'rgba(0,0,0,.45)'; g.stroke();
+        g.fillStyle = pcol(p); g.beginPath(); g.arc(X, Y, r, 0, 7); g.fill(); g.lineWidth = 1; g.strokeStyle = sat ? '#fff' : 'rgba(0,0,0,.45)'; g.stroke();
         if (outRow(p)) { g.strokeStyle = '#2f6fd0'; g.lineWidth = 1.6; g.beginPath(); g.arc(X, Y, r + 3, 0, 7); g.stroke(); }
         if (V.s > 3) { g.font = '600 11px IBM Plex Mono, monospace'; g.fillStyle = sat ? '#fff' : css('--fg'); g.fillText('P' + p.i, X + r + 4, Y - 6); } } }
+    if (STY.gisx && STY.gisx.on) { const r = Math.max(2.5, Math.min(6, 0.5 * V.s));
+      for (const q of gisx) { const X = sx(q.x), Y = sy(q.y); if (X < -10 || X > W + 10 || Y < -10 || Y > H + 10) continue;
+        g.lineWidth = 1.6; g.strokeStyle = VCOL[q.v]; g.strokeRect(X - r, Y - r, 2 * r, 2 * r); } }
     // scale bar
     const target = 110 / V.s, pw = 10 ** Math.floor(Math.log10(target)), m = [1, 2, 5, 10].map(k => k * pw).filter(v => v <= target).pop() || pw;
     const sc = document.getElementById('scale'); sc.querySelector('span').textContent = m >= 1000 ? `${m / 1000} กม.` : `${m} ม.`; sc.querySelector('div').style.width = (m * V.s) + 'px';
@@ -232,25 +257,46 @@ tr.click:hover { background: color-mix(in srgb, var(--accent) 10%, transparent);
   cv.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
   function pick(px, py) { let best = null, bd = 12; for (const p of poles) { const d = Math.hypot(sx(p.x) - px, sy(p.y) - py); if (d < bd) { bd = d; best = p; } } return best; }
   const CN = { bad: 'อยู่ในแนวงานทาง', warn: 'ใกล้ขอบงานทาง', ok: 'พ้นแนวงานทาง', none: 'ไม่มีแบบตรงนั้น' };
-  const desc = p => `<b>P${p.i}</b> กม.${fmtSta(p.sta)} ${p.off >= 0 ? 'RT.' : 'LT.'}<br>ห่าง CL ${f2(Math.abs(p.off))} ม. · ขอบงานทาง ${f2(p.edge)} ม. · R.O.W. ${f2(p.row)} ม.<br>${CN[cls(p)]}${outRow(p) ? ' · นอก R.O.W.' : ''}`;
+  const desc = p => `<b>P${p.i}</b> กม.${fmtSta(p.sta)} ${p.off >= 0 ? 'RT.' : 'LT.'}<br>ห่าง CL ${f2(Math.abs(p.off))} ม. · ขอบงานทาง ${f2(p.edge)} ม. · R.O.W. ${f2(p.row)} ม.<br>${CN[cls(p)]}${outRow(p) ? ' · นอก R.O.W.' : ''}${p.gm ? '<br>' + gdesc(p) : ''}`;
   function hover(px, py) { const p = pick(px, py); if (!p) { tip.style.display = 'none'; return; } tip.innerHTML = desc(p); tip.style.display = 'block';
     tip.style.left = Math.min(px + 14, W - 300) + 'px'; tip.style.top = Math.max(py - 10, 50) + 'px'; }
 
   // ---------- panel ----------
+  const ngList = () => poles.filter(p => p.gm && p.gm[0] === 2 && cls(p) === 'bad').sort((a, b) => a.sta - b.sta);
+  const ngGrp = p => p.gm[4] <= LINE_NEAR ? 'a' : p.gm[4] > 5 ? 'c' : 'b';
+  const NGC = { a: GC.gl, b: '#c9a227', c: GC.gn }, NGT = { a: 'สาย GIS ผ่าน น่าจะเป็นเสา กฟภ. ที่ GIS ไม่มี', b: 'ไม่ชัด ต้องดูหน้างาน', c: 'ห่างสาย GIS อาจไม่ใช่เสา กฟภ.' }, NGS = { a: 'น่าจะ กฟภ.', b: 'ดูหน้างาน', c: 'อาจไม่ใช่ กฟภ.' };
+  const ngDup = p => { const q = poles.find(o => o !== p && Math.abs(o.x - p.x) < 0.05 && Math.abs(o.y - p.y) < 0.05); return q ? ` · พิกัดซ้ำกับ P${q.i}` : ''; };
   function panel() {
     const C = COL(), n = { bad: 0, warn: 0, ok: 0, none: 0 }; let nr = 0;
     for (const p of poles) { n[cls(p)]++; if (outRow(p)) nr++; }
-    document.getElementById('kpi').innerHTML = [[n.bad, 'อยู่ในแนวงานทาง', C.bad], [n.warn, `ห่างขอบงานทาง ≤ ${MG} ม.`, C.warn], [n.ok, 'พ้นแนวงานทาง', C.ok], [nr, 'อยู่นอก R.O.W. เดิม', '#2f6fd0']]
+    const gn = { gm: 0, gp: 0, gl: 0, gn: 0, none: 0 }; for (const p of poles) gn[gcls(p)]++;
+    const kp = CM === 'gis' ? [[gn.gm, `ตรงกับ GIS (≤ ${G.tol[0]} ม.)`, GC.gm], [gn.gp, `น่าจะต้นเดียวกัน (${G.tol[0]}–${G.tol[1]} ม.)`, GC.gp], [gn.gl, `ไม่พบ แต่สาย GIS ผ่าน ≤ ${LINE_NEAR} ม.`, GC.gl], [gn.gn, 'ไม่พบใน GIS', GC.gn]]
+      : [[n.bad, 'อยู่ในแนวงานทาง', C.bad], [n.warn, `ห่างขอบงานทาง ≤ ${MG} ม.`, C.warn], [n.ok, 'พ้นแนวงานทาง', C.ok], [nr, 'อยู่นอก R.O.W. เดิม', '#2f6fd0']];
+    document.getElementById('kpi').innerHTML = kp
       .map(([v, t, c]) => `<div><b style="color:${c}">${v.toLocaleString('th-TH')}</b><span>${t}</span></div>`).join('');
-    const km = {}; for (const p of poles) { const k = Math.floor(p.sta / 1000); const o = km[k] ||= { t: 0, bad: 0, warn: 0, row: 0, s: p }; o.t++; if (cls(p) === 'bad') o.bad++; if (cls(p) === 'warn') o.warn++; if (outRow(p)) o.row++; }
-    document.getElementById('kmT').innerHTML = '<tr><th>ช่วง กม.</th><th>เสา</th><th>ในแนว</th><th>ใกล้</th><th>นอก R.O.W.</th></tr>' +
-      Object.entries(km).map(([k, o]) => `<tr class="click" data-x="${o.s.x}" data-y="${o.s.y}"><td>${k}+000 – ${+k + 1}+000</td><td class="n">${o.t}</td><td class="n" style="color:${o.bad ? C.bad : ''}">${o.bad}</td><td class="n" style="color:${o.warn ? C.warn : ''}">${o.warn}</td><td class="n">${o.row}</td></tr>`).join('');
+    const km = {}; for (const p of poles) { const k = Math.floor(p.sta / 1000); const o = km[k] ||= { t: 0, bad: 0, warn: 0, row: 0, ng: 0, s: p }; o.t++; if (cls(p) === 'bad') o.bad++; if (cls(p) === 'warn') o.warn++; if (outRow(p)) o.row++; if (p.gm && p.gm[0] === 2) o.ng++; }
+    document.getElementById('kmT').innerHTML = '<tr><th>ช่วง กม.</th><th>เสา</th><th>ในแนว</th><th>ใกล้</th><th>นอก R.O.W.</th>' + (G ? '<th>ไม่พบ GIS</th>' : '') + '</tr>' +
+      Object.entries(km).map(([k, o]) => `<tr class="click" data-x="${o.s.x}" data-y="${o.s.y}"><td>${k}+000 – ${+k + 1}+000</td><td class="n">${o.t}</td><td class="n" style="color:${o.bad ? C.bad : ''}">${o.bad}</td><td class="n" style="color:${o.warn ? C.warn : ''}">${o.warn}</td><td class="n">${o.row}</td>${G ? `<td class="n">${o.ng}</td>` : ''}</tr>`).join('');
     const bad = poles.filter(p => cls(p) === 'bad' || cls(p) === 'warn');
-    document.getElementById('pT').innerHTML = '<tr><th>เสา</th><th>กม.</th><th>ฝั่ง</th><th>ห่าง CL</th><th>ขอบงาน</th></tr>' +
-      bad.map(p => `<tr class="click" data-x="${p.x}" data-y="${p.y}" data-z="40"><td><span class="lg" style="background:${C[cls(p)]}"></span>P${p.i}</td><td class="n">${fmtSta(p.sta)}</td><td>${p.off >= 0 ? 'RT.' : 'LT.'}</td><td class="n">${f2(Math.abs(p.off))}</td><td class="n">${f2(p.edge)}</td></tr>`).join('');
-    document.querySelectorAll('tr.click').forEach(tr => tr.onclick = () => goTo(+tr.dataset.x, +tr.dataset.y, +(tr.dataset.z || 400)));
+    const gcell = p => !p.gm ? '' : `<td><span class="lg" style="background:${GC[gcls(p)]}"></span>${p.gm[0] < 2 ? VN[p.gm[2]] + ' ' + p.gm[3] + ' ม.' : p.gm[4] <= LINE_NEAR ? 'ไม่พบ (มีสาย)' : 'ไม่พบ'}</td>`;
+    document.getElementById('pT').innerHTML = '<tr><th>เสา</th><th>กม.</th><th>ฝั่ง</th><th>ห่าง CL</th><th>ขอบงาน</th>' + (G ? '<th>PEA GIS</th>' : '') + '</tr>' +
+      bad.map(p => `<tr class="click" data-x="${p.x}" data-y="${p.y}" data-z="40"><td><span class="lg" style="background:${C[cls(p)]}"></span>P${p.i}</td><td class="n">${fmtSta(p.sta)}</td><td>${p.off >= 0 ? 'RT.' : 'LT.'}</td><td class="n">${f2(Math.abs(p.off))}</td><td class="n">${f2(p.edge)}</td>${gcell(p)}</tr>`).join('');
+    // เสาในแนวงานทางที่ไม่พบใน GIS (ตรงกับ docs/เสาในแนวงานทาง_ไม่พบใน_PEA_GIS.csv)
+    if (G) { const ng = ngList(), cnt = { a: 0, b: 0, c: 0 }; ng.forEach(p => cnt[ngGrp(p)]++);
+      document.getElementById('ngBox').hidden = false;
+      document.getElementById('ngH').textContent = `เสาในแนวงานทางที่ไม่พบใน PEA GIS (${ng.length} ต้น, คลิกเพื่อซูม)`;
+      document.getElementById('ngN').innerHTML = `<span class="lg" style="background:${GC.gl}"></span>สาย GIS ผ่าน ≤ ${LINE_NEAR} ม. ${cnt.a} ต้น (น่าจะเป็นเสา กฟภ. ที่ GIS ไม่มี) · <span class="lg" style="background:#c9a227"></span>2–5 ม. ${cnt.b} ต้น (ไม่ชัด ต้องดูหน้างาน) · <span class="lg" style="background:${GC.gn}"></span>&gt; 5 ม. ${cnt.c} ต้น (อาจไม่ใช่เสา กฟภ. เช่นเสาสื่อสาร)`;
+      document.getElementById('ngT').innerHTML = '<tr><th>เสา</th><th>กม.</th><th>ฝั่ง</th><th>ห่าง CL</th><th>เสา GIS</th><th>สาย GIS</th><th>ข้อสังเกต</th></tr>' +
+        ng.map(p => `<tr class="click" data-x="${p.x}" data-y="${p.y}" data-z="40"><td><span class="lg" style="background:${NGC[ngGrp(p)]}"></span>P${p.i}</td><td class="n">${fmtSta(p.sta)}</td><td>${p.off >= 0 ? 'RT.' : 'LT.'}</td><td class="n">${f2(Math.abs(p.off))}</td><td class="n">${f1(p.gm[1])}</td><td>${VN[p.gm[5]]} ${f1(p.gm[4])} ม.</td><td>${NGS[ngGrp(p)]}${ngDup(p) && ' · ซ้ำ ' + ngDup(p).split(' ').pop()}</td></tr>`).join(''); }
+    document.querySelectorAll('tr.click').forEach(tr =>tr.onclick = () => goTo(+tr.dataset.x, +tr.dataset.y, +(tr.dataset.z || 400)));
   }
   document.getElementById('mg').addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { MG = v; panel(); draw(); } });
+  const cmEl = document.getElementById('cm');
+  if (!G) cmEl.disabled = true;
+  cmEl.addEventListener('change', () => { CM = cmEl.value; panel(); draw(); });
+  document.getElementById('gisLg').innerHTML = !G ? 'ไม่มีไฟล์ผลเทียบ PEA GIS (assets/gis_match.js)' :
+    `ผลเทียบ PEA GIS: ${['gm', 'gp', 'gl', 'gn'].map(k => `<span class="lg" style="background:${GC[k]}"></span>${GN[k]}`).join(' · ')}<br>` +
+    `จับคู่เสาใกล้สุดทั้งสองทาง ≤ ${G.tol[0]} ม. ตรงกัน, ${G.tol[0]}–${G.tol[1]} ม. น่าจะต้นเดียวกัน (ค่าสมมติ) · สี่เหลี่ยม = เสาใน GIS ที่ ทล. ไม่ได้สำรวจ (ม่วง 115 kV, น้ำเงิน 22 kV, เทา แรงต่ำ) · ${G.src} ไม่แสดง TAG/รหัสฟีดเดอร์ ต้องยืนยันที่หน้างาน`;
   document.getElementById('rt').addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { RT = v; panel(); draw(); } });
   document.getElementById('bAll').onclick = fitAll;
   document.getElementById('bSite').onclick = () => goTo(site[0], site[1], 220);
@@ -258,11 +304,17 @@ tr.click:hover { background: color-mix(in srgb, var(--accent) 10%, transparent);
   const ks = document.getElementById('kmSel'); ks.innerHTML = '<option value="">ไปที่ กม. ...</option>' + R.kms.filter(k => k[2] % 1000 === 0).map(k => `<option value="${k[2]}">กม.${fmtSta(k[2])}</option>`).join('');
   ks.onchange = () => { const k = R.kms.find(q => q[2] === +ks.value); if (k) goTo(k[0] * S, k[1] * S, 300); ks.value = ''; };
   document.getElementById('bCsv').onclick = () => {
-    const rows = [['เสา', 'กม.', 'ฝั่ง', 'ห่าง CL (ม.)', 'ขอบงานทาง (ม.)', 'R.O.W. (ม.)', 'ผล', 'นอก R.O.W.', 'E', 'N', 'lat', 'lon']];
-    for (const p of poles) { const [la, lo] = inv(p.x, p.y); rows.push(['P' + p.i, fmtSta(p.sta), p.off >= 0 ? 'RT' : 'LT', Math.abs(p.off).toFixed(2), f2(p.edge), f2(p.row), CN[cls(p)], outRow(p) ? 'ใช่' : '', (p.x + R.E0).toFixed(3), (p.y + R.N0).toFixed(3), la.toFixed(7), lo.toFixed(7)]); }
+    const rows = [['เสา', 'กม.', 'ฝั่ง', 'ห่าง CL (ม.)', 'ขอบงานทาง (ม.)', 'R.O.W. (ม.)', 'ผล', 'นอก R.O.W.', 'E', 'N', 'lat', 'lon', 'PEA GIS', 'ห่างเสา GIS (ม.)', 'แรงดัน GIS', 'ความสูง GIS (ม.)', 'ห่างสาย GIS (ม.)']];
+    for (const p of poles) { const [la, lo] = inv(p.x, p.y), m = p.gm; rows.push(['P' + p.i, fmtSta(p.sta), p.off >= 0 ? 'RT' : 'LT', Math.abs(p.off).toFixed(2), f2(p.edge), f2(p.row), CN[cls(p)], outRow(p) ? 'ใช่' : '', (p.x + R.E0).toFixed(3), (p.y + R.N0).toFixed(3), la.toFixed(7), lo.toFixed(7),
+      m ? GN[gcls(p)] : '', m ? m[1] : '', m && m[0] < 2 ? VN[m[2]] : '', m && m[0] < 2 ? m[3] : '', m ? m[4] : '']); }
     const b = new Blob(['﻿' + rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }), u = URL.createObjectURL(b), aa = document.createElement('a'); aa.href = u; aa.download = 'tl222_poles.csv'; aa.click(); setTimeout(() => URL.revokeObjectURL(u), 1000);
   };
-  document.getElementById('src').textContent = 'ที่มา: ' + R.src + ' ระบบพิกัด TM ของงาน (CM 103°51′, FE 100,000, k 1.0000213946)';
+  document.getElementById('bNg').onclick = () => {
+    const rows = [['ลำดับ', 'เสา ทล.', 'กม.', 'ฝั่ง', 'ห่าง CL (ม.)', 'ขอบงานทาง (ม.)', 'เสา GIS ใกล้สุด (ม.)', 'สาย GIS ใกล้สุด', 'ห่างสาย GIS (ม.)', 'ข้อสังเกต', 'E', 'N', 'lat', 'lon']];
+    ngList().forEach((p, k) => { const [la, lo] = inv(p.x, p.y); rows.push([k + 1, 'P' + p.i, fmtSta(p.sta), p.off >= 0 ? 'RT.' : 'LT.', Math.abs(p.off).toFixed(2), f2(p.edge), p.gm[1], VN[p.gm[5]], p.gm[4], NGT[ngGrp(p)] + ngDup(p), (p.x + R.E0).toFixed(2), (p.y + R.N0).toFixed(2), la.toFixed(7), lo.toFixed(7)]); });
+    const b = new Blob(['﻿' + rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }), u = URL.createObjectURL(b), aa = document.createElement('a'); aa.href = u; aa.download = 'tl222_ในแนวงานทาง_ไม่พบใน_GIS.csv'; aa.click(); setTimeout(() => URL.revokeObjectURL(u), 1000);
+  };
+  document.getElementById('src').textContent ='ที่มา: ' + R.src + ' ระบบพิกัด TM ของงาน (CM 103°51′, FE 100,000, k 1.0000213946)';
   document.getElementById('cal').textContent = R.calRes[0];
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { panel(); draw(); });
   function resize() { const r = cv.getBoundingClientRect(); dpr = Math.min(devicePixelRatio || 1, 2); W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; draw(); }
