@@ -455,7 +455,20 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const SKY = (() => { const cv = document.createElement('canvas'); cv.width = 2; cv.height = 512; const g = cv.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 512);
     gr.addColorStop(0, '#3f78c0'); gr.addColorStop(0.55, '#8fb6dc'); gr.addColorStop(0.85, '#d5e2ea'); gr.addColorStop(1, '#c9d6dd'); g.fillStyle = gr; g.fillRect(0, 0, 2, 512);
     return new THREE.CanvasTexture(cv); })();
+  // ground surface texture (pretty mode): grey speckle + grass strokes multiplied onto the ground colour, mapped by world x/z (terrain has no UVs)
+  const GROUND = new Set([mat.ground]);
+  const groundTex = (() => { const n = 512, cv = document.createElement('canvas'); cv.width = cv.height = n; const g = cv.getContext('2d');
+    g.fillStyle = '#d8d8d8'; g.fillRect(0, 0, n, n);
+    for (let i = 0; i < 40; i++) { const r = 20 + Math.random() * 70, x = Math.random() * n, y = Math.random() * n, gr = g.createRadialGradient(x, y, 0, x, y, r), v = Math.random() < .5 ? '0,0,0' : '255,255,240';
+      gr.addColorStop(0, `rgba(${v},0.10)`); gr.addColorStop(1, `rgba(${v},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r); }   // soft patches
+    for (let i = 0; i < 70000; i++) { const v = (Math.random() - .5) * .5; g.fillStyle = v > 0 ? `rgba(255,255,235,${v})` : `rgba(20,25,0,${-v})`; g.fillRect(Math.random() * n, Math.random() * n, 1 + Math.random() * 1.5, 1 + Math.random() * 1.5); }
+    for (let i = 0; i < 2500; i++) { const x = Math.random() * n, y = Math.random() * n; g.strokeStyle = `rgba(${40 + Math.random() * 60},${60 + Math.random() * 50},20,0.35)`; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (Math.random() - .5) * 5, y - 3 - Math.random() * 7); g.stroke(); }   // grass blades
+    const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; })();
+  const worldUV = s => { s.vertexShader = s.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n  vUv = (modelMatrix * vec4(position, 1.0)).xz / 8.0;'); };   // one tile = 8 m
   const pbr = m => { if (!(m.isMeshLambertMaterial || m.isMeshPhongMaterial || WIRE.has(m))) return m; let p = TO_PBR.get(m); if (p) return p;
+    if (GROUND.has(m)) { p = new THREE.MeshStandardMaterial({ color: m.color, map: groundTex, bumpMap: groundTex, bumpScale: .03, roughness: 1, envMapIntensity: .2,
+        polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits });
+      p.onBeforeCompile = worldUV; TO_PBR.set(m, p); FROM_PBR.set(p, m); return p; }
     const o = PBR.get(m) || {}, K = o.physical ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
     p = new K({ color: m.color, map: m.map, vertexColors: m.vertexColors, transparent: m.transparent, opacity: m.opacity, side: m.side, depthWrite: m.depthWrite,
       polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits,
@@ -1353,7 +1366,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       lb.material.sizeAttenuation = false; lb.scale.multiplyScalar(0.02 / lb.scale.y); }
     // ground for the whole route (outside the detailed site terrain)
     { const xs = st.map(q => [q.x, q.z]); const x0 = Math.min(...xs.map(q => q[0])) - 600, x1 = Math.max(...xs.map(q => q[0])) + 600, z0 = Math.min(...xs.map(q => q[1])) - 1200, z1 = Math.max(...xs.map(q => q[1])) + 1200;
-      const gm = new THREE.MeshLambertMaterial({ color: 0x8fa66b, polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 4 }), y = g0 - 0.02;
+      const gm = new THREE.MeshLambertMaterial({ color: 0x8fa66b, polygonOffset: true, polygonOffsetFactor: 4, polygonOffsetUnits: 4 }), y = g0 - 0.02; GROUND.add(gm);
       for (const [a, b, c, d] of [[x0, -300, z0, z1], [300, x1, z0, z1], [-300, 300, z0, -200], [-300, 300, 200, z1]]) {
         const m = new THREE.Mesh(new THREE.PlaneGeometry(b - a, d - c), gm); m.rotation.x = -Math.PI / 2; m.position.set((a + b) / 2, y, (c + d) / 2); m.receiveShadow = true; routeG.add(m); } }
     // ---- surveyed poles: 12 m square PC poles (8103 widths, height ค่าสมมติ), crossarm across the road, 3 insulators, class collar ----
