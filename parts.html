@@ -80,6 +80,7 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
       <button id="tWhole" aria-pressed="false">ทั้งต้น</button>
       <button id="tLbl" aria-pressed="true">ป้ายชื่อ</button>
       <button id="tEx" aria-pressed="false" title="เลื่อนชิ้นส่วนออกจากกันเพื่อดูว่าประกอบด้วยอะไรบ้าง ระยะที่เลื่อนใช้ดูภาพเท่านั้น">แยกชิ้น</button>
+      <button id="tReal" aria-pressed="true" title="ท้องฟ้า พื้นดิน เงา ผิววัสดุ และสายไฟออกจากเสา (สายหย่อนเป็นค่าสมมติ ใช้ดูภาพเท่านั้น)">ฉากจริง</button>
     </div>
   </div>
 </div>
@@ -137,17 +138,42 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
     lamp: new THREE.MeshBasicMaterial({ color: 0xfff4cc }) };
   const edge = new THREE.LineBasicMaterial({ color: 0x1f2427, transparent: true, opacity: 0.55 });
 
+  // ---------- ฉากจริง: sky, ground, sun shadows, ACES tone mapping, textures (display only) ----------
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+  Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 120 });
+  for (const m of Object.values(MAT)) if (m.color) m.color.convertSRGBToLinear();   // colours above are sRGB hex
+  const canvasTex = (w, h, draw, rep) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; draw(cv.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (rep) t.repeat.set(...rep); return t; };
+  const speckle = (g, w, h, base, amp, n) => { g.fillStyle = base; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < n; i++) { const v = (Math.random() - 0.5) * amp; g.fillStyle = v > 0 ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${-v})`; g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2); } };
+  const SKY = canvasTex(2, 512, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, '#3f78c0'); gr.addColorStop(0.55, '#8fb6dc'); gr.addColorStop(0.8, '#dfe8ee'); gr.addColorStop(1, '#e9e4da'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+  const groundTex = canvasTex(512, 512, (g, w, h) => { speckle(g, w, h, '#a39a72', 0.35, 60000);
+    for (let i = 0; i < 400; i++) { g.strokeStyle = `rgba(${70 + Math.random() * 40},${80 + Math.random() * 40},40,0.35)`; g.beginPath(); const x = Math.random() * w, y = Math.random() * h; g.moveTo(x, y); g.lineTo(x + (Math.random() - 0.5) * 6, y - 4 - Math.random() * 8); g.stroke(); } }, [60, 60]);   // dry grass / soil
+  const concTex = canvasTex(256, 1024, (g, w, h) => { speckle(g, w, h, '#c3c0b8', 0.28, 40000);
+    for (let i = 0; i < 14; i++) { const x = Math.random() * w; g.fillStyle = 'rgba(70,65,55,0.06)'; g.fillRect(x, Math.random() * h * 0.3, 3 + Math.random() * 10, h * (0.3 + Math.random() * 0.6)); } });   // weathering streaks
+  const strandTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#c4c9cc'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(60,66,70,0.55)'; g.lineWidth = 3;
+    for (let k = -2; k < 4; k++) { g.beginPath(); g.moveTo(k * 16, 0); g.lineTo(k * 16 + 64, 64); g.stroke(); } });   // helical strands of a bare conductor
+  const realShaft = new THREE.MeshStandardMaterial({ map: concTex, bumpMap: concTex, bumpScale: 0.004, roughness: 0.92, envMapIntensity: 0.3 });
+  const realGround = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ map: groundTex, roughness: 1, envMapIntensity: 0.2 }));
+  realGround.rotation.x = -Math.PI / 2; realGround.receiveShadow = true; scene.add(realGround);
+  const condMat = new THREE.MeshStandardMaterial({ map: strandTex, bumpMap: strandTex, bumpScale: 0.002, metalness: 0.8, roughness: 0.42, envMapIntensity: 1 });
+  let real = true;
+
   const bin = Uint8Array.from(atob(window.PEA_PARTS_B64), c => c.charCodeAt(0)).buffer;
   const gl = await new Promise((ok, no) => new THREE.GLTFLoader().parse(bin, '', ok, no));
   const heads = {};
   for (const root of [...gl.scene.children]) {
-    const labels = [];
+    const labels = [], pts = [];
     for (const o of [...root.children]) {
-      if (o.isMesh) { o.material = MAT[o.name.slice(root.name.length + 1)] || MAT.galv; o.add(new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 35), edge));
+      if (o.userData.pt) { pts.push({ k: o.userData.pt, p: o.position.clone() }); root.remove(o); continue; }
+      if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.material = MAT[o.name.slice(root.name.length + 1)] || MAT.galv; o.add(new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 35), edge));
         o.geometry.userData.base = o.geometry.attributes.position.array.slice(); }   // assembled positions; _ex = exploded-view offset (build_parts.py)
       else { if (o.userData.t) labels.push({ text: o.userData.t, p: o.position.clone(), ex: new THREE.Vector3(...(o.userData.ex || [0, 0, 0])) }); root.remove(o); }
     }
-    heads[root.name] = { root, labels, title: root.userData.title || root.name };
+    heads[root.name] = { root, labels, pts, title: root.userData.title || root.name };
   }
 
   const ground = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.MeshLambertMaterial({ color: 0xdfe3dc }));
@@ -163,10 +189,30 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
     for (const z of I.poles) {
       // PEA prestressed concrete poles are square/rectangular and taper (A8100: 8105 162x200 at the top, 8108 250x250, 8103 ~150); steel street light stays round
       const g = I.w ? new THREE.CylinderGeometry(I.w[0] / Math.SQRT2, I.w[1] / Math.SQRT2, I.h, 4, 1).rotateY(Math.PI / 4) : new THREE.CylinderGeometry(I.r[0], I.r[1], I.h, 16);
-      const s = new THREE.Mesh(g, shaftM); if (I.zs) s.scale.z = I.zs;
+      const s = new THREE.Mesh(g, real ? realShaft : shaftM); if (I.zs) s.scale.z = I.zs; s.castShadow = s.receiveShadow = true; s.userData.shaft = 1;
       s.position.set(0, I.h / 2, z); s.add(new THREE.LineSegments(new THREE.EdgesGeometry(s.geometry, 35), edge)); group.add(s);
     }
     head = hd.root.clone(); head.position.y = I.h; group.add(head);
+    // conductors leaving the head along the line (x): 60 m of a 250 m span with 5 m sag = ค่าสมมติ for the picture only
+    const spans = new THREE.Group(); spans.name = 'spans'; spans.visible = real; group.add(spans);
+    for (const { k, p } of hd.pts) {
+      const dirs = k === 'w' ? [] : k === 'e' ? [Math.sign(p.x)] : k === 'bare' ? [-1] : k === 'tac' ? [1] : [-1, 1], tac = k === 'tac';
+      const L = 250, sag = 5, at = (sx, x) => new THREE.Vector3(p.x + sx * x, I.h + p.y - 4 * sag * (x / L) * (1 - x / L), p.z);
+      for (const sx of dirs) {
+        if (tac) {   // TAC: 3 insulated cores laid round a bare messenger; lay length 1.2 m, core Ø 36 mm, messenger Ø 12 mm = ค่าสมมติ
+          const N = 1500, lay = 1.2, rc = 0.018, rm = 0.006, ms = [], cs = [[], [], []];
+          for (let i = 0; i <= N; i++) { const x = 60 * i / N, b = at(sx, x); ms.push(b);
+            cs.forEach((c, k) => { const a = 2 * Math.PI * (x / lay + k / 3); c.push(b.clone().add(new THREE.Vector3(0, Math.cos(a), Math.sin(a)).multiplyScalar(rm + rc))); }); }
+          const mm = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ms), N, rm, 8), MAT.galv); mm.castShadow = true; spans.add(mm);
+          for (const c of cs) { const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(c), N, rc, 10), MAT.cable); m.castShadow = true; spans.add(m); }
+          continue;
+        }
+        const pts = []; for (let i = 0; i <= 60; i++) pts.push(at(sx, i));
+        const curve = new THREE.CatmullRomCurve3(pts), m = new THREE.Mesh(new THREE.TubeGeometry(curve, 240, 0.0095, 12), condMat.clone());
+        m.material.map = strandTex.clone(); m.material.map.needsUpdate = true; m.material.map.repeat.set(60 / 0.06, 1);
+        m.userData.span = { curve, r: 0.0095, from: p.clone().add(new THREE.Vector3(0, I.h, 0)) }; m.castShadow = true; spans.add(m);
+      }
+    }
     setEx(0.5 - 0.5 * Math.cos(Math.PI * exT), true); frame();
     document.querySelectorAll('#list button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === name));
     const li = a => a.map(t => `<li>${t}</li>`).join('');
@@ -174,6 +220,7 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
       <ul>${li(I.dims)}</ul>${I.assumed.length ? `<h3>ค่าสมมติ</h3><ul>${li(I.assumed)}</ul>` : ''}
       <p class="note" style="margin-top:8px">ใช้ในโมเดล: ${I.use}</p>`;
     try { history.replaceState(null, '', '#' + name); } catch (e) {}
+    clrG.clear(); if (name === 'HF2221') runClr();   // shortcut: live/earthed tags and phase grouping verified for 2221 only; other heads need them before enabling
   }
   function frame() {
     const box = new THREE.Box3();
@@ -186,7 +233,7 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
     }
     const c = box.getCenter(new THREE.Vector3()), r = box.getSize(new THREE.Vector3()).length() / 2;
     const d = r / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * (whole ? 0.95 : 1.1);
-    camera.position.copy(c).add(new THREE.Vector3(0.75, 0.42, 1).normalize().multiplyScalar(d));
+    camera.position.copy(c).add(new THREE.Vector3(0.75, real && !whole ? 0.08 : 0.42, 1).normalize().multiplyScalar(d));   // ฉากจริง: eye level with the head, sky behind
     controls.target.copy(c); controls.update();
   }
 
@@ -214,6 +261,71 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
       if (done) { o.geometry.dispose(); o.geometry = new THREE.EdgesGeometry(o.parent.geometry, 35); } });
   }
   document.getElementById('tEx').onclick = () => { exTo = exTo ? 0 : 1; tg('tEx', !!exTo); };
+  function setReal(on) {
+    real = on; tg('tReal', on);
+    scene.background = on ? SKY : new THREE.Color(0xf6f7f6); scene.fog = on ? new THREE.Fog(0xdde6ec, 60, 320) : null;
+    realGround.visible = on; ground.visible = grid.visible = !on; edge.visible = !on;
+    sun.intensity = on ? 1.5 : 0.55; fill.intensity = on ? 0.15 : 0.25; scene.children.forEach(o => { if (o.isHemisphereLight) o.intensity = on ? 0.3 : 0.85; });
+    renderer.toneMappingExposure = 0.8;
+    renderer.toneMapping = on ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+    if (group) group.traverse(o => { if (o.userData.shaft) o.material = on ? realShaft : shaftM; if (o.name === 'spans') o.visible = on; });
+    scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
+  }
+  document.getElementById('tReal').onclick = () => setReal(!real);
+
+  // ---------- clearance check from the model geometry (assembled view) ----------
+  // live = conductor-side parts (_alu, _live) + bare spans; earthed = steel and concrete (_galv, _concrete, pole shafts).
+  // Insulators and insulated cable are not counted. Jumper shape and some hardware positions are ค่าสมมติ, so the result is indicative.
+  const LIVE = /_(alu|live)$/, GND = /_(galv|concrete)$/, CELL = 0.25, REACH = 0.8;
+  const clrG = new THREE.Group(); scene.add(clrG);
+  let CLR = null;
+  const cellKey = (x, y, z) => `${x},${y},${z}`, ci = v => Math.floor(v / CELL);
+  function measure() {
+    group.updateMatrixWorld(true);
+    const live = [], tris = new Map(), attach = [], hd = heads[cur];
+    for (const { k, p } of hd.pts) if (k !== 'tac') attach.push(p.clone().add(new THREE.Vector3(0, INFO[cur].h, 0)));
+    const ph = attach.map((_, i) => i), find = i => ph[i] === i ? i : (ph[i] = find(ph[i]));   // bundle sub-conductors (< 0.45 m apart across the line) = one phase
+    attach.forEach((a, i) => attach.forEach((b, j) => { if (j > i && Math.hypot(a.y - b.y, a.z - b.z) < 0.45) ph[find(j)] = find(i); }));
+    const phaseOf = q => { let bi = 0, bd = Infinity; attach.forEach((a, i) => { const d = a.distanceToSquared(q); if (d < bd) { bd = d; bi = i; } }); return find(bi); };
+    const addTri = t => { const b = new THREE.Box3().setFromPoints([t.a, t.b, t.c]);
+      for (let x = ci(b.min.x); x <= ci(b.max.x); x++) for (let y = ci(b.min.y); y <= ci(b.max.y); y++) for (let z = ci(b.min.z); z <= ci(b.max.z); z++) {
+        const kk = cellKey(x, y, z); (tris.get(kk) || tris.set(kk, []).get(kk)).push(t); } };
+    group.traverse(o => {
+      if (!o.isMesh) return; const g = o.geometry, pa = g.attributes.position, nm = o.name || '';
+      if (o.userData.span) { const { curve, r } = o.userData.span; for (let s = 0; s <= 1; s += 1 / 600) { const q = curve.getPoint(s * 0.15); live.push({ q, r, f: phaseOf(o.userData.span.from) }); } return; }   // first 9 m
+      if (LIVE.test(nm)) { const st = Math.max(1, Math.floor(pa.count / 5000));
+        for (let i = 0; i < pa.count; i += st) { const q = new THREE.Vector3().fromBufferAttribute(pa, i).applyMatrix4(o.matrixWorld); live.push({ q, r: 0, f: phaseOf(q) }); } }
+      else if (GND.test(nm) || o.userData.shaft) { const ix = g.index, n = ix ? ix.count : pa.count, P = k => new THREE.Vector3().fromBufferAttribute(pa, ix ? ix.getX(k) : k).applyMatrix4(o.matrixWorld);
+        for (let i = 0; i < n; i += 3) addTri(new THREE.Triangle(P(i), P(i + 1), P(i + 2))); }
+    });
+    const near = (q, fn) => { const R = Math.ceil(REACH / CELL); for (let x = ci(q.x) - R; x <= ci(q.x) + R; x++) for (let y = ci(q.y) - R; y <= ci(q.y) + R; y++) for (let z = ci(q.z) - R; z <= ci(q.z) + R; z++) { const l = tris.get(cellKey(x, y, z)); if (l) fn(l); } };
+    const pg = { d: Infinity }, c = new THREE.Vector3();
+    for (const L of live) near(L.q, l => { for (const t of l) { t.closestPointToPoint(L.q, c); const d = c.distanceTo(L.q) - L.r; if (d < pg.d) Object.assign(pg, { d, a: L.q.clone(), b: c.clone() }); } });
+    const pp = { d: Infinity }, lg = new Map();   // phase to phase: live points of different phases
+    for (const L of live) { const kk = cellKey(ci(L.q.x), ci(L.q.y), ci(L.q.z)); (lg.get(kk) || lg.set(kk, []).get(kk)).push(L); }
+    const R = Math.ceil(REACH / CELL);
+    for (const L of live) for (let x = ci(L.q.x) - R; x <= ci(L.q.x) + R; x++) for (let y = ci(L.q.y) - R; y <= ci(L.q.y) + R; y++) for (let z = ci(L.q.z) - R; z <= ci(L.q.z) + R; z++) {
+      const l = lg.get(cellKey(x, y, z)); if (!l) continue;
+      for (const M of l) if (M.f !== L.f) { const d = L.q.distanceTo(M.q) - L.r - M.r; if (d < pp.d) Object.assign(pp, { d, a: L.q.clone(), b: M.q.clone() }); } }
+    return { pg, pp, n: live.length };
+  }
+  function showClr() {
+    const el = document.getElementById('clr'); if (!el || !CLR) return;
+    const lim = { pg: +document.getElementById('cPG').value, pp: +document.getElementById('cPP').value }, f = d => isFinite(d) ? (d * 1000).toFixed(0) + ' มม.' : `> ${REACH * 1000} มม.`;
+    const row = (k, t) => { const d = CLR[k].d, ok = !(d < lim[k]); return `<li>${t}: <b style="color:${ok ? 'var(--fg)' : '#c0262d'}">${f(d)}</b> ${ok ? '✓ ผ่าน' : '✗ น้อยกว่าเกณฑ์'}</li>`; };
+    el.querySelector('ul').innerHTML = row('pg', 'ส่วนมีไฟ ถึง คอน/เสา/สลักเกลียว (เฟส–ดิน)') + row('pp', 'ระหว่างเฟส');
+    clrG.clear();
+    for (const [k, col] of [['pg', 0xc0262d], ['pp', 0xe07b00]]) { const r = CLR[k]; if (!isFinite(r.d)) continue;
+      clrG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([r.a, r.b]), new THREE.LineBasicMaterial({ color: col, depthTest: false })));
+      for (const q of [r.a, r.b]) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 8), new THREE.MeshBasicMaterial({ color: col, depthTest: false })); s.position.copy(q); s.renderOrder = 9; clrG.add(s); } }
+  }
+  function runClr() {
+    document.getElementById('info').insertAdjacentHTML('beforeend', `<div id="clr"><h3>ระยะห่างตัวนำ (วัดจากโมเดล)</h3><ul></ul>
+      <p class="note">เกณฑ์ต่ำสุด เฟส–ดิน <input id="cPG" type="number" step="0.01" value="0.30" style="width:5em"> ม. ระหว่างเฟส <input id="cPP" type="number" step="0.01" value="0.40" style="width:5em"> ม.
+      <b>ค่าสมมติ</b> ใส่ค่าตามมาตรฐาน กฟภ. ก่อนใช้ ระยะวัดผิวถึงผิวของชิ้นส่วนในโมเดล (ไม่นับลูกถ้วยและเคเบิลหุ้มฉนวน) ตำแหน่งสายแจมเปอร์และอุปกรณ์บางชิ้นเป็นค่าสมมติ เส้นแดง/ส้มในภาพคือคู่ที่ใกล้ที่สุด</p></div>`);
+    for (const id of ['cPG', 'cPP']) document.getElementById(id).addEventListener('input', showClr);
+    CLR = measure(); showClr();
+  }
 
   // leader labels: anchors projected to screen, boxes stacked in a column on the nearer side
   const svg = document.getElementById('lead'), coDiv = document.getElementById('co');
@@ -246,7 +358,7 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
   }
   new ResizeObserver(resize).observe(stage); resize();
   const first = (location.hash || '').slice(1);
-  show(heads[first] ? first : 'T2314A');
+  show(heads[first] ? first : 'T2314A'); setReal(true);
   let last = '';
   (function loop() {
     const now = performance.now(), dt = Math.min(now - tPrev, 100) / 600; tPrev = now;
