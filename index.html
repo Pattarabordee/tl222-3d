@@ -1410,23 +1410,62 @@ table.ph th { color: var(--muted); font-weight: 600; }
     note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
       (GM ? `ผลเทียบ PEA GIS (เลือก "ปลอกสีเสาตาม"): <b style="color:#2e8b57">ตรงกัน ≤ ${GM.tol[0]} ม. ${gc.gm}</b> · <b style="color:#a8861b">น่าจะต้นเดียวกัน ${GM.tol[0]}–${GM.tol[1]} ม. ${gc.gp}</b> · <b style="color:#c4651a">ไม่พบแต่สาย GIS ผ่าน ≤ ${GLN} ม. ${gc.gl}</b> · <b style="color:#c0262d">ไม่พบใน GIS ${gc.gn}</b> · เสา GIS ที่ ทล. ไม่ได้สำรวจ ${GM.x.length} ต้น (ม่วง 115 kV, น้ำเงิน 22 kV, เทา แรงต่ำ) เกณฑ์ระยะเป็นค่าสมมติ ${GM.src} ต้องยืนยันที่หน้างาน<br>` : '') +
       `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา) อาคารสูง 4 ม. ` +
-      (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง (ส้มอ่อน) และทรงพุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม (เขียว) ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> อาคารสูง 4 ม. ทรงพุ่มสูง 2.5–7 ม. Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
+      (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง และกลุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> ผนังสูง 3–4 ม. หลังคาปั้นหยา สีอาคาร ต้นไม้ 1 ต้นต่อพื้นที่พุ่ม 45 ม.² สูง 5–9 ม. วางสุ่มในกรอบพุ่ม (ไม่ใช่ตำแหน่งต้นจริง) Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
       `ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
   }
   // ---- buildings / tree canopies traced from Esri imagery by segment-geospatial (tools/sat_segment.py); heights = ค่าสมมติ ----
-  const SATK = [['bldg', 0, 4, new THREE.MeshLambertMaterial({ color: 0xd9a066 })],                                  // อาคารสูง 4 ม. = ค่าสมมติ
-    ['tree', 2.5, 7, new THREE.MeshLambertMaterial({ color: 0x3f7d3a, transparent: true, opacity: 0.4, depthWrite: false })]];   // โปร่งให้เห็นสะพานและเสาด้านหลัง        // ทรงพุ่ม 2.5–7 ม. = ค่าสมมติ
-  // near = centroid on the site terrain (one mesh each, on gy); far = the rest of the corridor, merged per kind at y0
+  // Display only, all ค่าสมมติ: walls 3.0–4.0 m, hip roof rising 0.35 × the short side (max 2.5 m) with 0.4 m eaves, colours from common Thai houses;
+  // one tree per 45 m² of canopy, trunk 1.5–3 m, crown radius 1.6–3.4 m (so tops reach about 5–9 m).
+  const SAT_WALL = ['#e8e2d4', '#efe9dc', '#d9cdb5', '#cfc6b8', '#e6d3b0', '#bfc6c4'].map(c => new THREE.Color(c));
+  const SAT_ROOF = ['#9b3b2c', '#7a3326', '#5e6a73', '#3f5f86', '#8a8d8f', '#a5552e', '#4f5a45'].map(c => new THREE.Color(c));
+  const SAT_LEAF = ['#3d6b2f', '#4a7a33', '#2f5a28', '#56813a', '#3b6330', '#62853f'].map(c => new THREE.Color(c));
+  const crownGeo = (() => { const g = new THREE.SphereGeometry(1, 14, 10), p = g.attributes.position;   // indexed, so normals stay smooth after the bulge   // lumpy crown: bulge the sphere with a few fixed sine lobes
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), k = 1 + 0.13 * Math.sin(5 * x + 1.3) * Math.sin(4 * y + 0.7) * Math.sin(5 * z + 2.1) + 0.07 * Math.sin(11 * x + 9 * z);
+      p.setXYZ(i, x * k, y * k * 0.85, z * k); }
+    g.computeVertexNormals(); return g; })();
+  const crownFar = new THREE.SphereGeometry(1, 7, 5).scale(1, 0.85, 1);
+  const trunkGeo = new THREE.CylinderGeometry(0.12, 0.2, 1, 6).translate(0, 0.5, 0);
+  const bldgMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), leafMat = M(0xffffff), trunkMat = M(0x5a4632);
+  // near = centroid on the site terrain (on gy); far = the rest of the corridor at y0 (route mode only)
   function satBuild(near, grp, y0) {
     if (!window.SATF || !RTE) return; const { R, S, toM } = RTE;
-    for (const [k, h0, h1, mtl] of SATK) { const far = [];
-      for (const b of SATF[k]) { const pts = []; let cx = 0, cz = 0;
-        for (let i = 0; i < b.length; i += 2) { const [x, z] = toM(b[i] * S + R.E0, b[i + 1] * S + R.N0); pts.push(new THREE.Vector2(x, -z)); cx += x; cz += z; }
-        if (pts.length < 3) continue; cx /= pts.length; cz /= pts.length;
-        if ((Math.abs(cx) < 280 && Math.abs(cz) < 190) !== near) continue;
-        if (near) { const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: h1 - h0, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, gy(cx, cz) + h0, 0); const m = new THREE.Mesh(g, mtl); m.name = k; m.castShadow = true; grp.add(m); }
-        else far.push(new THREE.Shape(pts)); }
-      if (far.length) { const g = new THREE.ExtrudeGeometry(far, { depth: h1 - h0, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, y0 + h0, 0); const m = new THREE.Mesh(g, mtl); m.name = k; m.castShadow = true; grp.add(m); } }
+    let seed = near ? 7 : 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;   // fixed sequence: same picture every load
+    const polys = k => SATF[k].map(b => { const p = []; for (let i = 0; i < b.length; i += 2) p.push(toM(b[i] * S + R.E0, b[i + 1] * S + R.N0)); return p; })
+      .filter(p => { if (p.length < 3) return false; const c = p.reduce((s, q) => [s[0] + q[0] / p.length, s[1] + q[1] / p.length], [0, 0]); return (Math.abs(c[0]) < 280 && Math.abs(c[1]) < 190) === near; });
+    const Y = (x, z) => near ? gy(x, z) : y0;
+    const area = p => p.reduce((s, q, i) => { const r = p[(i + 1) % p.length]; return s + q[0] * r[1] - r[0] * q[1]; }, 0) / 2;
+    // ---- buildings: walls + hip roof, one merged mesh with vertex colours ----
+    const pos = [], col = [];
+    const tri = (a, b, c, C) => { pos.push(...a, ...b, ...c); for (let i = 0; i < 3; i++) col.push(C.r, C.g, C.b); };
+    for (const p of polys('bldg')) {
+      const c = p.reduce((s, q) => [s[0] + q[0] / p.length, s[1] + q[1] / p.length], [0, 0]), y = Y(c[0], c[1]);
+      const h = 3 + rnd(), wall = SAT_WALL[Math.floor(rnd() * SAT_WALL.length)].clone().multiplyScalar(0.92 + 0.1 * rnd()), roof = SAT_ROOF[Math.floor(rnd() * SAT_ROOF.length)];
+      const short = 2 * Math.sqrt(Math.abs(area(p)) / Math.PI), rh = Math.min(2.5, 0.35 * short);
+      const E = p.map(q => { const dx = q[0] - c[0], dz = q[1] - c[1], d = Math.hypot(dx, dz) || 1; return [q[0] + dx / d * 0.4, y + h, q[1] + dz / d * 0.4]; });
+      const T = p.map(q => [c[0] + (q[0] - c[0]) * 0.22, y + h + rh, c[1] + (q[1] - c[1]) * 0.22]), top = [c[0], y + h + rh, c[1]];
+      for (let i = 0; i < p.length; i++) { const j = (i + 1) % p.length, a = p[i], b = p[j];
+        tri([a[0], y, a[1]], [b[0], y, b[1]], [b[0], y + h, b[1]], wall); tri([a[0], y, a[1]], [b[0], y + h, b[1]], [a[0], y + h, a[1]], wall);
+        tri(E[i], E[j], T[j], roof); tri(E[i], T[j], T[i], roof); tri(top, T[i], T[j], roof); }
+    }
+    if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
+      const m = new THREE.Mesh(g, bldgMat); m.name = 'bldg'; m.castShadow = true; grp.add(m); }   // no receiveShadow: the shallow roofs stripe (shadow acne) with the 400 m shadow map
+    // ---- trees: points scattered inside each canopy outline ----
+    const trees = [];
+    for (const p of polys('tree')) {
+      const A = Math.abs(area(p)), n = Math.max(1, Math.round(A / 45)); let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (const [x, z] of p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+      const inside = (x, z) => { let s = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, zi] = p[i], [xj, zj] = p[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) s = !s; } return s; };
+      for (let k = 0, got = 0; k < n * 4 && got < n; k++) { const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0); if (inside(x, z)) { trees.push([x, z]); got++; } }
+    }
+    if (trees.length) {
+      const crowns = new THREE.InstancedMesh(near ? crownGeo : crownFar, leafMat, trees.length), trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, trees.length);
+      const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+      trees.forEach(([x, z], i) => { const y = Y(x, z), r = 1.6 + 1.8 * rnd(), th = 1.5 + 1.5 * rnd();
+        trunks.setMatrixAt(i, m4.compose(new THREE.Vector3(x, y, z), q.identity(), new THREE.Vector3(1, th + r * 0.5, 1)));
+        e.set(0, rnd() * 6.28, 0); crowns.setMatrixAt(i, m4.compose(new THREE.Vector3(x, y + th + r * 0.8, z), q.setFromEuler(e), new THREE.Vector3(r * (0.9 + 0.2 * rnd()), r, r * (0.9 + 0.2 * rnd()))));
+        crowns.setColorAt(i, SAT_LEAF[Math.floor(rnd() * SAT_LEAF.length)].clone().multiplyScalar(0.85 + 0.3 * rnd())); });
+      for (const m of [crowns, trunks]) { m.name = 'tree'; m.castShadow = near; m.receiveShadow = near; grp.add(m); }   // ~23,000 trees along the corridor: no shadows, low-poly crown
+    }
     satVis();
   }
   // buildings and trees toggle separately (checkboxes routeSat / routeTree), both near and far groups
