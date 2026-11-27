@@ -323,7 +323,7 @@ svg#lead { position: absolute; inset: 0; width: 100%; height: 100%; pointer-even
     document.getElementById('info').insertAdjacentHTML('beforeend', `<div id="clr"><h3>ระยะห่างตัวนำ (วัดจากโมเดล)</h3><ul></ul>
       <p class="note">เกณฑ์ต่ำสุด เฟส–ดิน <input id="cPG" type="number" step="0.01" value="0.30" style="width:5em"> ม. ระหว่างเฟส <input id="cPP" type="number" step="0.01" value="0.40" style="width:5em"> ม.
       <b>ค่าสมมติ</b> ใส่ค่าตามมาตรฐาน กฟภ. ก่อนใช้ ระยะวัดผิวถึงผิวของชิ้นส่วนในโมเดล (ไม่นับลูกถ้วยและเคเบิลหุ้มฉนวน) ตำแหน่งสายแจมเปอร์และอุปกรณ์บางชิ้นเป็นค่าสมมติ เส้นแดง/ส้มในภาพคือคู่ที่ใกล้ที่สุด</p></div>`);
-    for (const id of ['cPG', 'cPP']) document.getElementById(id).addEventListener('input', showClr);
+    for (const id of ['cPG', 'cPP']) { const el = document.getElementById(id); el.style.padding = '4px 8px'; el.addEventListener('input', showClr); }
     CLR = measure(); showClr();
   }
 
