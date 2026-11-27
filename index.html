@@ -449,7 +449,13 @@ table.ph th { color: var(--muted); font-weight: 600; }
   for (const m of [PART_MAT.concrete, PART_MAT.beam, PART_MAT.slab, PART_MAT.walk, PART_MAT.barrier, PART_MAT.sub, PART_MAT.pile, PART_MAT.approach, mat.pole, mat.pier, mat.oldDeck, mat.road, mat.roadDS, mat.rail])
     PBR.set(m, { roughness: .92, bumpMap: noiseTex, bumpScale: .015 });   // คอนกรีตผิวหยาบ
   const TO_PBR = new WeakMap(), FROM_PBR = new WeakMap();
-  const pbr = m => { if (!(m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return m; let p = TO_PBR.get(m); if (p) return p;
+  // bare conductors: flat-colour (Basic) in the plain view; metallic in pretty mode, colour kept (it codes the conductor type)
+  const WIRE = new Set([lineMat.acsr, lineMat.sac, lineMat.hv, lineMat.neu, lineMat.neuHv]);
+  for (const m of WIRE) PBR.set(m, { metalness: .75, roughness: .35 });
+  const SKY = (() => { const cv = document.createElement('canvas'); cv.width = 2; cv.height = 512; const g = cv.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 512);
+    gr.addColorStop(0, '#3f78c0'); gr.addColorStop(0.55, '#8fb6dc'); gr.addColorStop(0.85, '#d5e2ea'); gr.addColorStop(1, '#c9d6dd'); g.fillStyle = gr; g.fillRect(0, 0, 2, 512);
+    return new THREE.CanvasTexture(cv); })();
+  const pbr = m => { if (!(m.isMeshLambertMaterial || m.isMeshPhongMaterial || WIRE.has(m))) return m; let p = TO_PBR.get(m); if (p) return p;
     const o = PBR.get(m) || {}, K = o.physical ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
     p = new K({ color: m.color, map: m.map, vertexColors: m.vertexColors, transparent: m.transparent, opacity: m.opacity, side: m.side, depthWrite: m.depthWrite,
       polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits,
@@ -458,7 +464,11 @@ table.ph th { color: var(--muted); font-weight: 600; }
     if (o.bumpMap) Object.assign(p, { bumpMap: o.bumpMap, bumpScale: o.bumpScale });
     if (o.physical) Object.assign(p, { clearcoat: o.clearcoat, clearcoatRoughness: o.clearcoatRoughness });
     TO_PBR.set(m, p); FROM_PBR.set(p, m); return p; };
-  const setPretty = on => { PRETTY = on; scene.environment = on ? ENV : null; hemi.intensity = on ? .5 : .75; sun.intensity = on ? .9 : .75;
+  const setPretty = on => { PRETTY = on; scene.environment = on ? ENV : null; hemi.intensity = on ? .5 : .75; sun.intensity = on ? 1.1 : .75;
+    // ภาพแบบภาพถ่าย: ACES tone mapping, sky gradient, no CAD edge lines
+    renderer.toneMapping = on ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping; renderer.toneMappingExposure = 1.15;
+    scene.background = on ? SKY : new THREE.Color(0xc9d6dd); edgeMat.visible = !on;
+    scene.traverse(o => { if (o.material && !Array.isArray(o.material)) o.material.needsUpdate = true; });
     document.getElementById('prettyOn').setAttribute('aria-pressed', String(on)); };
   document.getElementById('prettyOn').addEventListener('click', () => setPretty(!PRETTY)); setPretty(PRETTY);
   async function loadGLB(b64, edgeAngle) {
