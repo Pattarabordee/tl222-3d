@@ -1391,7 +1391,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   }
   // ---- buildings / tree canopies traced from Esri imagery by segment-geospatial (tools/sat_segment.py); heights = ค่าสมมติ ----
   const SATK = [['bldg', 0, 4, new THREE.MeshLambertMaterial({ color: 0xd9a066 })],                                  // อาคารสูง 4 ม. = ค่าสมมติ
-    ['tree', 2.5, 7, new THREE.MeshLambertMaterial({ color: 0x3f7d3a, transparent: true, opacity: 0.85 })]];        // ทรงพุ่ม 2.5–7 ม. = ค่าสมมติ
+    ['tree', 2.5, 7, new THREE.MeshLambertMaterial({ color: 0x3f7d3a, transparent: true, opacity: 0.4, depthWrite: false })]];   // โปร่งให้เห็นสะพานและเสาด้านหลัง        // ทรงพุ่ม 2.5–7 ม. = ค่าสมมติ
   // near = centroid on the site terrain (one mesh each, on gy); far = the rest of the corridor, merged per kind at y0
   function satBuild(near, grp, y0) {
     if (!window.SATF || !RTE) return; const { R, S, toM } = RTE;
