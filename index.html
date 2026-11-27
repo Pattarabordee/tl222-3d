@@ -302,7 +302,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
         <label id="routeCadL" hidden><input type="checkbox" id="routeCad"> <span style="background:#5b2a86"></span>เส้นแบบ CAD ของ ทล. (ตรวจเทียบ)</label>
         <label id="routeGisL" hidden>ปลอกสีเสาตาม <select id="routeCm"><option value="road">ผลตรวจแนวงานทาง</option><option value="gis">ผลเทียบ PEA GIS</option></select></label>
         <label id="routeGisxL" hidden><input type="checkbox" id="routeGisx"> <span style="background:#2f6fd0"></span>เสา PEA GIS ที่ ทล. ไม่ได้สำรวจ (สีตามแรงดัน ความสูงตาม GIS)</label>
-        <label id="routeSatL" hidden><input type="checkbox" id="routeSat" checked> <span style="background:#3f7d3a"></span>อาคาร/ต้นไม้จากภาพดาวเทียม (AI ตีกรอบ ข้างละ 80 ม.)</label>
+        <label id="routeSatL" hidden><input type="checkbox" id="routeSat" checked> <span style="background:#d9a066"></span>อาคารจากภาพดาวเทียม (AI ตีกรอบ ข้างละ 80 ม.)</label>
+        <label id="routeTreeL" hidden><input type="checkbox" id="routeTree" checked> <span style="background:#3f7d3a"></span>พุ่มไม้จากภาพดาวเทียม (AI ตีกรอบ ข้างละ 80 ม.)</label>
         <label><input type="checkbox" id="satOn"> <span style="background:linear-gradient(90deg,#4d5b3a,#8a8f7a,#5d6b55)"></span>ภาพดาวเทียม (Esri World Imagery)</label>
         <p class="assume" id="satNote" hidden></p>
         <label><input type="checkbox" id="demOn"> <span style="background:linear-gradient(90deg,#a7c98a,#ece0ae,#cfa784)"></span>ภูมิประเทศ Copernicus DEM 30 ม. (เส้นชั้นความสูง 1 ม.)</label>
@@ -1330,7 +1331,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: 4, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, g0, 0);
       const m = new THREE.Mesh(g, [M(0xb5533c), M(0xe3ddd0)]); m.castShadow = true; routeG.add(m); }
     // satellite buildings / trees outside the site terrain (the part on the site is satNear, shown in every view)
-    if (window.SATF) { const sg = new THREE.Group(); sg.name = 'satf'; sg.visible = document.getElementById('routeSat').checked; routeG.add(sg); satBuild(false, sg, g0); }
+    if (window.SATF) { const sg = new THREE.Group(); sg.name = 'satf'; routeG.add(sg); satBuild(false, sg, g0); }
     // thin CAD lines of the design (optional, for checking against the drawing)
     const cad = new THREE.Group(); cad.name = 'cad'; cad.visible = document.getElementById('routeCad').checked;
     cad.add(lineSeg(R.layers.design, 0x5b2a86, false, g0 + EMB + 0.05)); cad.add(lineSeg(R.layers.edge, 0x7d6aa0, false, g0 + EMB + 0.05)); routeG.add(cad);
@@ -1400,10 +1401,14 @@ table.ph th { color: var(--muted); font-weight: 600; }
         for (let i = 0; i < b.length; i += 2) { const [x, z] = toM(b[i] * S + R.E0, b[i + 1] * S + R.N0); pts.push(new THREE.Vector2(x, -z)); cx += x; cz += z; }
         if (pts.length < 3) continue; cx /= pts.length; cz /= pts.length;
         if ((Math.abs(cx) < 280 && Math.abs(cz) < 190) !== near) continue;
-        if (near) { const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: h1 - h0, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, gy(cx, cz) + h0, 0); const m = new THREE.Mesh(g, mtl); m.castShadow = true; grp.add(m); }
+        if (near) { const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: h1 - h0, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, gy(cx, cz) + h0, 0); const m = new THREE.Mesh(g, mtl); m.name = k; m.castShadow = true; grp.add(m); }
         else far.push(new THREE.Shape(pts)); }
-      if (far.length) { const g = new THREE.ExtrudeGeometry(far, { depth: h1 - h0, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, y0 + h0, 0); const m = new THREE.Mesh(g, mtl); m.castShadow = true; grp.add(m); } }
+      if (far.length) { const g = new THREE.ExtrudeGeometry(far, { depth: h1 - h0, bevelEnabled: false }); g.rotateX(-Math.PI / 2); g.translate(0, y0 + h0, 0); const m = new THREE.Mesh(g, mtl); m.name = k; m.castShadow = true; grp.add(m); } }
+    satVis();
   }
+  // buildings and trees toggle separately (checkboxes routeSat / routeTree), both near and far groups
+  function satVis() { const on = { bldg: document.getElementById('routeSat').checked, tree: document.getElementById('routeTree').checked };
+    for (const g of [satNear, routeG.getObjectByName('satf')]) if (g) g.children.forEach(m => { m.visible = on[m.name]; }); }
   const satNear = new THREE.Group(); scene.add(satNear);
   function setRoute(on) {
     routeG.visible = on; FOG.near = on ? 40000 : 450; FOG.far = on ? 80000 : 900; camera.far = on ? 60000 : 1200; camera.updateProjectionMatrix();
@@ -1417,8 +1422,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       views._km = [[x - 70, y + 26, z + 60], [x + 40, y + 2, z]]; go('_km'); });
     document.getElementById('routeOn').addEventListener('change', e => setRoute(e.target.checked));
     document.getElementById('routeCad').addEventListener('change', e => { const c = routeG.getObjectByName('cad'); if (c) c.visible = e.target.checked; });
-    satBuild(true, satNear); document.getElementById('routeSatL').hidden = !window.SATF;
-    document.getElementById('routeSat').addEventListener('change', e => { satNear.visible = e.target.checked; const c = routeG.getObjectByName('satf'); if (c) c.visible = e.target.checked; });
+    satBuild(true, satNear); document.getElementById('routeSatL').hidden = document.getElementById('routeTreeL').hidden = !window.SATF;
+    for (const id of ['routeSat', 'routeTree']) document.getElementById(id).addEventListener('change', satVis);
     document.getElementById('routeCm').addEventListener('change', () => { if (routeG.children.length) buildRoute(); });
     document.getElementById('routeGisx').addEventListener('change', e => { const c = routeG.getObjectByName('gisx'); if (c) c.visible = e.target.checked; });
   } else { document.getElementById('routeOn').disabled = true; document.getElementById('vroute').hidden = true; }
