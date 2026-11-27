@@ -455,8 +455,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const SKY = (() => { const cv = document.createElement('canvas'); cv.width = 2; cv.height = 512; const g = cv.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 512);
     gr.addColorStop(0, '#3f78c0'); gr.addColorStop(0.55, '#8fb6dc'); gr.addColorStop(0.85, '#d5e2ea'); gr.addColorStop(1, '#c9d6dd'); g.fillStyle = gr; g.fillRect(0, 0, 2, 512);
     return new THREE.CanvasTexture(cv); })();
-  // ground surface texture (pretty mode): grey speckle + grass strokes multiplied onto the ground colour, mapped by world x/z (terrain has no UVs)
-  const GROUND = new Set([mat.ground]);
+  // ground surface texture (pretty mode): grey speckle + grass strokes multiplied onto the ground colour
   const groundTex = (() => { const n = 512, cv = document.createElement('canvas'); cv.width = cv.height = n; const g = cv.getContext('2d');
     g.fillStyle = '#d8d8d8'; g.fillRect(0, 0, n, n);
     for (let i = 0; i < 40; i++) { const r = 20 + Math.random() * 70, x = Math.random() * n, y = Math.random() * n, gr = g.createRadialGradient(x, y, 0, x, y, r), v = Math.random() < .5 ? '0,0,0' : '255,255,240';
@@ -464,11 +463,32 @@ table.ph th { color: var(--muted); font-weight: 600; }
     for (let i = 0; i < 70000; i++) { const v = (Math.random() - .5) * .5; g.fillStyle = v > 0 ? `rgba(255,255,235,${v})` : `rgba(20,25,0,${-v})`; g.fillRect(Math.random() * n, Math.random() * n, 1 + Math.random() * 1.5, 1 + Math.random() * 1.5); }
     for (let i = 0; i < 2500; i++) { const x = Math.random() * n, y = Math.random() * n; g.strokeStyle = `rgba(${40 + Math.random() * 60},${60 + Math.random() * 50},20,0.35)`; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (Math.random() - .5) * 5, y - 3 - Math.random() * 7); g.stroke(); }   // grass blades
     const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; })();
-  const worldUV = s => { s.vertexShader = s.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n  vUv = (modelMatrix * vec4(position, 1.0)).xz / 8.0;'); };   // one tile = 8 m
+  // asphalt and concrete surface textures, same idea: grey detail multiplied onto the material colour
+  const canvasTex = draw => { const n = 512, cv = document.createElement('canvas'); cv.width = cv.height = n; const g = cv.getContext('2d'); draw(g, n);
+    const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; };
+  const blot = (g, n, k, rmin, rmax, a, light) => { for (let i = 0; i < k; i++) { const r = rmin + Math.random() * (rmax - rmin), x = Math.random() * n, y = Math.random() * n, gr = g.createRadialGradient(x, y, 0, x, y, r), v = light && Math.random() < .5 ? '255,255,255' : '0,0,0';
+    gr.addColorStop(0, `rgba(${v},${a})`); gr.addColorStop(1, `rgba(${v},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r); } };
+  const asphaltTex = canvasTex((g, n) => { g.fillStyle = '#c8c8c8'; g.fillRect(0, 0, n, n); blot(g, n, 30, 30, 110, .12, true);   // worn / patched areas
+    for (let i = 0; i < 120000; i++) { const v = Math.random(); g.fillStyle = v < .5 ? `rgba(0,0,0,${.15 + v * .4})` : `rgba(255,255,255,${(v - .5) * .5})`; g.fillRect(Math.random() * n, Math.random() * n, 1 + Math.random() * 2, 1 + Math.random() * 2); }   // aggregate
+    g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 1; for (let i = 0; i < 6; i++) { let x = Math.random() * n, y = Math.random() * n; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 12; k++) { x += (Math.random() - .5) * 30; y += (Math.random() - .5) * 30; g.lineTo(x, y); } g.stroke(); } });   // hairline cracks
+  const concreteTex = canvasTex((g, n) => { g.fillStyle = '#e2e2e0'; g.fillRect(0, 0, n, n); blot(g, n, 25, 20, 90, .08, true);
+    for (let i = 0; i < 60000; i++) { const v = (Math.random() - .5) * .3; g.fillStyle = v > 0 ? `rgba(255,255,255,${v})` : `rgba(0,0,0,${-v})`; g.fillRect(Math.random() * n, Math.random() * n, 1, 1); }   // pores
+    g.fillStyle = 'rgba(0,0,0,0.05)'; for (let y = 0; y < n; y += 128) g.fillRect(0, y, n, 2);                                               // formwork joints every ~1.2 m
+    for (let i = 0; i < 18; i++) { const x = Math.random() * n, w = 2 + Math.random() * 8, gr = g.createLinearGradient(0, 0, 0, n); gr.addColorStop(0, 'rgba(60,55,45,0.10)'); gr.addColorStop(1, 'rgba(60,55,45,0)'); g.fillStyle = gr; g.fillRect(x, 0, w, n * (.3 + Math.random() * .7)); } });   // rain streaks
+  const GRD = { tex: groundTex, scale: 8, bump: .03 }, ASP = { tex: asphaltTex, scale: 5, bump: .012 }, CON = { tex: concreteTex, scale: 4, bump: .01 };
+  const SURF = new Map([[mat.ground, GRD], [mat.road, ASP], [mat.roadDS, ASP], [PART_MAT.slab, ASP], [PART_MAT.approach, ASP],
+    ...[PART_MAT.beam, PART_MAT.walk, PART_MAT.barrier, PART_MAT.sub, PART_MAT.pile, PART_MAT.concrete, mat.pier, mat.oldDeck].map(m => [m, CON])]);
+  const GROUND = { add: m => SURF.set(m, GRD) };
+  // terrain / bridge meshes have no usable UVs: project the texture from world position on the plane facing the surface (top -> x/z, sides -> z/y or x/y)
+  const triUV = sc => { const f = s => { s.vertexShader = s.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>
+  { vec3 wp = (modelMatrix * vec4(position, 1.0)).xyz, wn = abs(normalize(mat3(modelMatrix) * normal)); vUv = (wn.y > 0.6 ? wp.xz : (wn.x > wn.z ? wp.zy : wp.xy)) / ${sc.toFixed(1)}; }`); };
+    return f; };
   const pbr = m => { if (!(m.isMeshLambertMaterial || m.isMeshPhongMaterial || WIRE.has(m))) return m; let p = TO_PBR.get(m); if (p) return p;
-    if (GROUND.has(m)) { p = new THREE.MeshStandardMaterial({ color: m.color, map: groundTex, bumpMap: groundTex, bumpScale: .03, roughness: 1, envMapIntensity: .2,
+    const sf = SURF.get(m);
+    if (sf) { p = new THREE.MeshStandardMaterial({ color: m.color, vertexColors: m.vertexColors, side: m.side, map: sf.tex, bumpMap: sf.tex, bumpScale: sf.bump, roughness: .95, envMapIntensity: .2,
         polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits });
-      p.onBeforeCompile = worldUV; TO_PBR.set(m, p); FROM_PBR.set(p, m); return p; }
+      p.onBeforeCompile = triUV(sf.scale); p.customProgramCacheKey = () => 'tri' + sf.scale;   // shaders differ only by the scale literal
+      TO_PBR.set(m, p); FROM_PBR.set(p, m); return p; }
     const o = PBR.get(m) || {}, K = o.physical ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
     p = new K({ color: m.color, map: m.map, vertexColors: m.vertexColors, transparent: m.transparent, opacity: m.opacity, side: m.side, depthWrite: m.depthWrite,
       polygonOffset: m.polygonOffset, polygonOffsetFactor: m.polygonOffsetFactor, polygonOffsetUnits: m.polygonOffsetUnits,
@@ -1278,6 +1298,20 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const toM = (e, n) => { const dx = e - R.E0 - O[0], dy = n - R.N0 - O[1]; return [dx * ux + dy * uy, dx * uy - dy * ux]; };   // [x along, z east]
     return { R, S, toM };
   })();
+  // ---- stations (model coords) with tangent / right normal ----
+  const RST = RTE && (() => { const { R, S, toM } = RTE;
+    const st = R.xs.map(r => { const [x, z] = toM(r[0] * S + R.E0, r[1] * S + R.N0); return { x, z, L: r[3], R: r[4] }; });
+    st.forEach((q, i) => { const a = st[Math.max(0, i - 1)], b = st[Math.min(st.length - 1, i + 1)], dx = b.x - a.x, dz = b.z - a.z, n = Math.hypot(dx, dz) || 1;
+      q.tx = dx / n; q.tz = dz / n; q.nx = -q.tz; q.nz = q.tx; });
+    return st; })();
+  // is (x, z) on the designed road (out to the shoulder edge; where the design has no section, the existing road + shoulder)? grid of stations, 50 m cells
+  const onRoad = (() => { if (!RST) return () => false; const T = RTE.R.tpl, G = new Map(), key = (i, j) => i + ',' + j;
+    RST.forEach(q => { const k = key(Math.floor(q.x / 50), Math.floor(q.z / 50)); (G.get(k) || G.set(k, []).get(k)).push(q); });
+    return (x, z) => { let best = null, bd = Infinity; const i0 = Math.floor(x / 50), j0 = Math.floor(z / 50);
+      for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) for (const q of G.get(key(i, j)) || []) { const d = (q.x - x) ** 2 + (q.z - z) ** 2; if (d < bd) { bd = d; best = q; } }
+      if (!best) return false; const off = (x - best.x) * best.nx + (z - best.z) * best.nz, tpl = off > 0 ? best.R : best.L;
+      return Math.abs(off) < (tpl ? T.sh : T.ex[1]); }; })();
+  const SATCUT = { near: { bldg: 0, tree: 0 }, far: { bldg: 0, tree: 0 } };
   const routeY = (x, z) => (Math.abs(x) < 280 && Math.abs(z) < 190 ? gy(x, z) : P.g0 - 100) + 0.12;
   let routeInst = null, routePts = null;
   const RCOL = { bad: new THREE.Color(0xc0262d), warn: new THREE.Color(0xe5934d), ok: new THREE.Color(0x1f9a55), none: new THREE.Color(0x8a8f8c) };
@@ -1294,10 +1328,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   function buildRoute() {
     routeG.clear(); if (!RTE) return;
     const { R, S, toM } = RTE, T = R.tpl, EMB = 0.6, g0 = P.g0 - 100;   // embankment height 0.6 m = ค่าสมมติ
-    // ---- stations (model coords) with tangent / right normal ----
-    const st = R.xs.map(r => { const [x, z] = toM(r[0] * S + R.E0, r[1] * S + R.N0); return { x, z, L: r[3], R: r[4] }; });
-    st.forEach((q, i) => { const a = st[Math.max(0, i - 1)], b = st[Math.min(st.length - 1, i + 1)], dx = b.x - a.x, dz = b.z - a.z, n = Math.hypot(dx, dz) || 1;
-      q.tx = dx / n; q.tz = dz / n; q.nx = -q.tz; q.nz = q.tx; });
+    const st = RST;
     const skip = q => Math.abs(q.x) < 232 && Math.abs(q.z) < 60;                    // the detailed bridge model owns this stretch
     const topY = q => { const ax = Math.abs(q.x); return ax < 400 ? lerp(ax, 232, 0, 400, g0 + EMB) : g0 + EMB; };
     // per side: list of [offset, y, colour] break points from the centre outwards
@@ -1322,7 +1353,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       }
     }
     const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); rg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); rg.computeVertexNormals();
-    const road = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); road.receiveShadow = true; routeG.add(road);
+    const road = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); road.receiveShadow = true; routeG.add(road); SURF.set(road.material, ASP);
     // far view: the 25 m road is under a pixel from 10 km, so draw a wide ribbon (±100 m, display only) when zoomed out
     { const fp = [], W2 = 100; for (let i = 0; i < st.length - 4; i += 4) { const a = st[i], b = st[i + 4], ya = topY(a) + 0.4, yb = topY(b) + 0.4;
         const A0 = [a.x - a.nx * W2, ya, a.z - a.nz * W2], A1 = [a.x + a.nx * W2, ya, a.z + a.nz * W2], B0 = [b.x - b.nx * W2, yb, b.z - b.nz * W2], B1 = [b.x + b.nx * W2, yb, b.z + b.nz * W2];
@@ -1410,7 +1441,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
       (GM ? `ผลเทียบ PEA GIS (เลือก "ปลอกสีเสาตาม"): <b style="color:#2e8b57">ตรงกัน ≤ ${GM.tol[0]} ม. ${gc.gm}</b> · <b style="color:#a8861b">น่าจะต้นเดียวกัน ${GM.tol[0]}–${GM.tol[1]} ม. ${gc.gp}</b> · <b style="color:#c4651a">ไม่พบแต่สาย GIS ผ่าน ≤ ${GLN} ม. ${gc.gl}</b> · <b style="color:#c0262d">ไม่พบใน GIS ${gc.gn}</b> · เสา GIS ที่ ทล. ไม่ได้สำรวจ ${GM.x.length} ต้น (ม่วง 115 kV, น้ำเงิน 22 kV, เทา แรงต่ำ) เกณฑ์ระยะเป็นค่าสมมติ ${GM.src} ต้องยืนยันที่หน้างาน<br>` : '') +
       `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา) อาคารสูง 4 ม. ` +
-      (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง และกลุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> ผนังสูง 3–4 ม. หลังคาปั้นหยา สีอาคาร ต้นไม้ 1 ต้นต่อพื้นที่พุ่ม 45 ม.² สูง 5–9 ม. วางสุ่มในกรอบพุ่ม (ไม่ใช่ตำแหน่งต้นจริง) Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
+      (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง และกลุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> ผนังสูง 3–4 ม. หลังคาปั้นหยา สีอาคาร ต้นไม้ 1 ต้นต่อพื้นที่พุ่ม 45 ม.² สูง 5–9 ม. วางสุ่มในกรอบพุ่ม (ไม่ใช่ตำแหน่งต้นจริง) ไม่แสดงอาคาร ${SATCUT.near.bldg + SATCUT.far.bldg} หลังและต้นไม้ ${(SATCUT.near.tree + SATCUT.far.tree).toLocaleString('th-TH')} ต้นที่อยู่บนผิวทางตามแบบ (ถึงขอบไหล่ทาง) เพราะต้องรื้อย้ายเพื่อสร้างถนน หรือเป็นจุดที่ AI ตีผิด (รถ เงา) Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
       `ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
   }
   // ---- buildings / tree canopies traced from Esri imagery by segment-geospatial (tools/sat_segment.py); heights = ค่าสมมติ ----
@@ -1435,10 +1466,11 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const Y = (x, z) => near ? gy(x, z) : y0;
     const area = p => p.reduce((s, q, i) => { const r = p[(i + 1) % p.length]; return s + q[0] * r[1] - r[0] * q[1]; }, 0) / 2;
     // ---- buildings: walls + hip roof, one merged mesh with vertex colours ----
-    const pos = [], col = [];
+    const pos = [], col = [], cut = SATCUT[near ? 'near' : 'far']; cut.bldg = cut.tree = 0;   // features on the designed road surface are left out (to be removed for the road, or an AI mistake)
     const tri = (a, b, c, C) => { pos.push(...a, ...b, ...c); for (let i = 0; i < 3; i++) col.push(C.r, C.g, C.b); };
     for (const p of polys('bldg')) {
       const c = p.reduce((s, q) => [s[0] + q[0] / p.length, s[1] + q[1] / p.length], [0, 0]), y = Y(c[0], c[1]);
+      if (onRoad(c[0], c[1])) { cut.bldg++; continue; }
       const h = 3 + rnd(), wall = SAT_WALL[Math.floor(rnd() * SAT_WALL.length)].clone().multiplyScalar(0.92 + 0.1 * rnd()), roof = SAT_ROOF[Math.floor(rnd() * SAT_ROOF.length)];
       const short = 2 * Math.sqrt(Math.abs(area(p)) / Math.PI), rh = Math.min(2.5, 0.35 * short);
       const E = p.map(q => { const dx = q[0] - c[0], dz = q[1] - c[1], d = Math.hypot(dx, dz) || 1; return [q[0] + dx / d * 0.4, y + h, q[1] + dz / d * 0.4]; });
@@ -1455,7 +1487,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
       const A = Math.abs(area(p)), n = Math.max(1, Math.round(A / 45)); let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
       for (const [x, z] of p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
       const inside = (x, z) => { let s = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, zi] = p[i], [xj, zj] = p[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) s = !s; } return s; };
-      for (let k = 0, got = 0; k < n * 4 && got < n; k++) { const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0); if (inside(x, z)) { trees.push([x, z]); got++; } }
+      for (let k = 0, got = 0; k < n * 4 && got < n; k++) { const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0); if (inside(x, z)) { got++; if (onRoad(x, z)) cut.tree++; else trees.push([x, z]); } }
     }
     if (trees.length) {
       const crowns = new THREE.InstancedMesh(near ? crownGeo : crownFar, leafMat, trees.length), trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, trees.length);
