@@ -1441,7 +1441,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
       (GM ? `ผลเทียบ PEA GIS (เลือก "ปลอกสีเสาตาม"): <b style="color:#2e8b57">ตรงกัน ≤ ${GM.tol[0]} ม. ${gc.gm}</b> · <b style="color:#a8861b">น่าจะต้นเดียวกัน ${GM.tol[0]}–${GM.tol[1]} ม. ${gc.gp}</b> · <b style="color:#c4651a">ไม่พบแต่สาย GIS ผ่าน ≤ ${GLN} ม. ${gc.gl}</b> · <b style="color:#c0262d">ไม่พบใน GIS ${gc.gn}</b> · เสา GIS ที่ ทล. ไม่ได้สำรวจ ${GM.x.length} ต้น (ม่วง 115 kV, น้ำเงิน 22 kV, เทา แรงต่ำ) เกณฑ์ระยะเป็นค่าสมมติ ${GM.src} ต้องยืนยันที่หน้างาน<br>` : '') +
       `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา) อาคารสูง 4 ม. ` +
-      (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง และกลุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> ผนังสูง 3–4 ม. หลังคาปั้นหยา สีอาคาร ต้นไม้ 1 ต้นต่อพื้นที่พุ่ม 45 ม.² สูง 5–9 ม. วางสุ่มในกรอบพุ่ม (ไม่ใช่ตำแหน่งต้นจริง) <b style="color:#c0262d">อาคารสีแดงโปร่ง ${SATCUT.near.bldg + SATCUT.far.bldg} หลัง</b> อยู่บนผิวทางตามแบบ (ถึงขอบไหล่ทาง) ต้องรื้อย้ายเพื่อสร้างถนน หรือเป็นจุดที่ AI ตีผิด (รถ เงา) ต้องตรวจกับการสำรวจ ต้นไม้บนผิวทาง ${(SATCUT.near.tree + SATCUT.far.tree).toLocaleString('th-TH')} ต้นไม่แสดง Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
+      (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง และกลุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> ผนังสูง 3–4 ม. หลังคาปั้นหยา สีอาคาร ต้นไม้ 1 ต้นต่อพื้นที่พุ่ม 45 ม.² สูง 5–9 ม. วางสุ่มในกรอบพุ่ม (ไม่ใช่ตำแหน่งต้นจริง) <b style="color:#c0262d">อาคารสีแดงโปร่ง ${SATCUT.near.bldg + SATCUT.far.bldg} หลัง</b> อยู่บนผิวทางตามแบบ (ถึงขอบไหล่ทาง) ต้องรื้อย้ายเพื่อสร้างถนน หรือเป็นจุดที่ AI ตีผิด (รถ เงา) และ<b style="color:#c0262d">ต้นไม้สีแดงโปร่ง ${(SATCUT.near.tree + SATCUT.far.tree).toLocaleString('th-TH')} ต้น</b>ที่ต้องตัด ต้องตรวจกับการสำรวจ Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
       `ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
   }
   // ---- buildings / tree canopies traced from Esri imagery by segment-geospatial (tools/sat_segment.py); heights = ค่าสมมติ ----
@@ -1458,6 +1458,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
   const trunkGeo = new THREE.CylinderGeometry(0.12, 0.2, 1, 6).translate(0, 0.5, 0);
   const bldgMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }),
     bldgCutMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.45, depthWrite: false }),   // to be removed: translucent red
+    treeCutMat = new THREE.MeshLambertMaterial({ color: 0xd7262d, transparent: true, opacity: 0.45, depthWrite: false }),   // to be cut: translucent red
     leafMat = M(0xffffff), trunkMat = M(0x5a4632);
   // near = centroid on the site terrain (on gy); far = the rest of the corridor at y0 (route mode only)
   function satBuild(near, grp, y0) {
@@ -1468,7 +1469,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const Y = (x, z) => near ? gy(x, z) : y0;
     const area = p => p.reduce((s, q, i) => { const r = p[(i + 1) % p.length]; return s + q[0] * r[1] - r[0] * q[1]; }, 0) / 2;
     // ---- buildings: walls + hip roof, one merged mesh with vertex colours ----
-    // buildings on the designed road surface (to be removed for the road, or an AI mistake) go to a separate translucent red mesh; trees there are left out
+    // buildings on the designed road surface (to be removed for the road, or an AI mistake) go to a separate translucent red mesh (trees too, below)
     const keep = { pos: [], col: [] }, gone = { pos: [], col: [] }, cut = SATCUT[near ? 'near' : 'far']; cut.bldg = cut.tree = 0;
     let to = keep; const tri = (a, b, c, C) => { to.pos.push(...a, ...b, ...c); for (let i = 0; i < 3; i++) to.col.push(C.r, C.g, C.b); };
     const RED = new THREE.Color(0xd7262d);
@@ -1493,16 +1494,17 @@ table.ph th { color: var(--muted); font-weight: 600; }
       const A = Math.abs(area(p)), n = Math.max(1, Math.round(A / 45)); let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
       for (const [x, z] of p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
       const inside = (x, z) => { let s = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, zi] = p[i], [xj, zj] = p[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) s = !s; } return s; };
-      for (let k = 0, got = 0; k < n * 4 && got < n; k++) { const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0); if (inside(x, z)) { got++; if (onRoad(x, z)) cut.tree++; else trees.push([x, z]); } }
+      for (let k = 0, got = 0; k < n * 4 && got < n; k++) { const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0); if (inside(x, z)) { got++; const rm = onRoad(x, z); if (rm) cut.tree++; trees.push([x, z, rm]); } }
     }
-    if (trees.length) {
-      const crowns = new THREE.InstancedMesh(near ? crownGeo : crownFar, leafMat, trees.length), trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, trees.length);
+    // trees on the designed road surface = to be cut: translucent red, no shadow
+    for (const cutSet of [false, true]) { const L = trees.filter(t => t[2] === cutSet); if (!L.length) continue;
+      const crowns = new THREE.InstancedMesh(near ? crownGeo : crownFar, cutSet ? treeCutMat : leafMat, L.length), trunks = new THREE.InstancedMesh(trunkGeo, cutSet ? treeCutMat : trunkMat, L.length);
       const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
-      trees.forEach(([x, z], i) => { const y = Y(x, z), r = 1.6 + 1.8 * rnd(), th = 1.5 + 1.5 * rnd();
+      L.forEach(([x, z], i) => { const y = Y(x, z), r = 1.6 + 1.8 * rnd(), th = 1.5 + 1.5 * rnd();
         trunks.setMatrixAt(i, m4.compose(new THREE.Vector3(x, y, z), q.identity(), new THREE.Vector3(1, th + r * 0.5, 1)));
         e.set(0, rnd() * 6.28, 0); crowns.setMatrixAt(i, m4.compose(new THREE.Vector3(x, y + th + r * 0.8, z), q.setFromEuler(e), new THREE.Vector3(r * (0.9 + 0.2 * rnd()), r, r * (0.9 + 0.2 * rnd()))));
-        crowns.setColorAt(i, SAT_LEAF[Math.floor(rnd() * SAT_LEAF.length)].clone().multiplyScalar(0.85 + 0.3 * rnd())); });
-      for (const m of [crowns, trunks]) { m.name = 'tree'; m.castShadow = near; m.receiveShadow = near; grp.add(m); }   // ~23,000 trees along the corridor: no shadows, low-poly crown
+        if (!cutSet) crowns.setColorAt(i, SAT_LEAF[Math.floor(rnd() * SAT_LEAF.length)].clone().multiplyScalar(0.85 + 0.3 * rnd())); });
+      for (const m of [crowns, trunks]) { m.name = 'tree'; m.castShadow = near && !cutSet; m.receiveShadow = near && !cutSet; grp.add(m); }   // ~23,000 trees along the corridor: no shadows, low-poly crown
     }
     satVis();
   }
