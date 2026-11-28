@@ -1414,8 +1414,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
     routePts.forEach((p, i) => { qt.setFromAxisAngle(up, p.ry); m4.compose(V(p.x, p.y, p.z), qt, one);
       iShaft.setMatrixAt(i, m4); iArm.setMatrixAt(i, m4); iCol.setMatrixAt(i, m4); iCol.setColorAt(i, rCol(p));
       [-0.95, 0, 0.95].forEach((d, k) => { const o = V(p.x - Math.sin(p.ry) * 0 + Math.sin(p.ry) * d * 0, p.y, p.z); const off = V(0, 0, d).applyQuaternion(qt); m4.compose(o.add(off), qt, one); iIns.setMatrixAt(i * 3 + k, m4); }); });
-    // poles in the road works (class "bad" = to be relocated): drawn again in translucent red; their normal instances are collapsed (scale 0)
-    routeBad = routePts.map((p, i) => rCls(p) === 'bad' ? i : -1).filter(i => i >= 0);
+    // poles in the road works or within L.O.W. of its edge (classes "bad" / "warn" = to be relocated): drawn again in translucent red; their normal instances are collapsed (scale 0)
+    routeBad = routePts.map((p, i) => rCls(p) === 'bad' || rCls(p) === 'warn' ? i : -1).filter(i => i >= 0);
     const zero = new THREE.Matrix4().makeScale(0, 0, 0), nb = routeBad.length;
     const rShaft = new THREE.InstancedMesh(shaft, poleCutMat, nb), rArm = new THREE.InstancedMesh(arm, poleCutMat, nb), rIns = new THREE.InstancedMesh(ins, poleCutMat, nb * 3);
     routeBad.forEach((i, j) => { for (const [src, dst, k] of [[iShaft, rShaft, 1], [iArm, rArm, 1], [iIns, rIns, 3]]) for (let s = 0; s < k; s++) {
