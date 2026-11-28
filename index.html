@@ -1447,15 +1447,24 @@ table.ph th { color: var(--muted); font-weight: 600; }
       const HT = [0, 18, H, 7], COL = [null, new THREE.Color(0x1c2f6e), new THREE.Color(0x6b4a1d), new THREE.Color(0x5f6b66)];
       const moving = routeBad.map(i => routePts[i]), near3 = (x, z) => moving.some(p => (p.x - x) ** 2 + (p.z - z) ** 2 < 9);
       const goes = (x, z) => onRoad(x, z, EMB * 2 + P.low) || near3(x, z);
-      const pos = [], col = [], red = []; let nRed = 0, nAll = 0, n22 = 0, len22 = 0, lenRed = 0;
-      for (const l of GISL.l) { const v = l[0], P3 = [];
+      const pos = [], col = [], red = []; let nRed = 0, nAll = 0, n22 = 0, nRedU = 0, len22 = 0, routeLen = 0, inCct = 0, inRoute = 0; const spanKeys = new Set(), seen = new Map();
+      for (const [li, l] of GISL.l.entries()) { const v = l[0], P3 = [];
         for (let i = 1; i < l.length; i += 2) { const [x, z] = toM(l[i] * S + R.E0, l[i + 1] * S + R.N0); P3.push([x, z, goes(x, z)]); }
         for (let i = 1; i < P3.length; i++) { const [ax, az, ra] = P3[i - 1], [bx, bz, rb] = P3[i];
           if (Math.abs(ax) < 235 && Math.abs(az) < 60 && Math.abs(bx) < 235 && Math.abs(bz) < 60) continue;   // the detailed bridge model owns this stretch
           const L = Math.hypot(bx - ax, bz - az); if (L < 0.5) continue;
           const ya = (Math.abs(ax) < 280 && Math.abs(az) < 190 ? gy(ax, az) : g0) + HT[v], yb = (Math.abs(bx) < 280 && Math.abs(bz) < 190 ? gy(bx, bz) : g0) + HT[v], sag = 0.0012 * L * L / 8 + 0.3, n = Math.max(4, Math.min(16, Math.ceil(L / 10)));
           const pts = []; for (let k = 0; k <= n; k++) { const t = k / n; pts.push(V(ax + (bx - ax) * t, ya + (yb - ya) * t - 4 * sag * t * (1 - t), az + (bz - az) * t)); }
-          nAll++; if (v === 2) { n22++; len22 += L; if (ra || rb) lenRed += L; }
+          nAll++;
+          if (v === 2) {   // quantities: sample every 1 m; circuit length inside the works, and route length where a sample within 1.5 m was not counted yet (circuits on the same poles = once)
+            const k1 = `${Math.round(ax)},${Math.round(az)}`, k2 = `${Math.round(bx)},${Math.round(bz)}`, sk = k1 < k2 ? k1 + '|' + k2 : k2 + '|' + k1;
+            if (!spanKeys.has(sk)) { spanKeys.add(sk); n22++; if (ra || rb) nRedU++; }
+            const m = Math.max(1, Math.round(L)), st = L / m;
+            for (let s = 0; s < m; s++) { const t = (s + 0.5) / m, x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+              const gk = (i, j) => i + ',' + j, ci = Math.floor(x / 1.5), cj = Math.floor(z / 1.5); let dup = false;
+              for (let i = ci - 1; i <= ci + 1 && !dup; i++) for (let j = cj - 1; j <= cj + 1 && !dup; j++) for (const q of seen.get(gk(i, j)) || []) if (q[2] !== li && (q[0] - x) ** 2 + (q[1] - z) ** 2 < 2.25) { dup = true; break; }   // only another GIS line counts as a duplicate
+              len22 += st; if (!dup) { routeLen += st; (seen.get(gk(ci, cj)) || seen.set(gk(ci, cj), []).get(gk(ci, cj))).push([x, z, li]); }
+              if (goes(x, z)) { inCct += st; if (!dup) inRoute += st; } } }
           // only 22 kV spans are marked / counted (LV and 115 kV stay in their colour)
           if (v === 2 && (ra || rb)) { nRed++; red.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n, 0.06, 5).toNonIndexed().attributes.position.array); }
           else for (let k = 1; k < pts.length; k++) { pos.push(...pts[k - 1].toArray(), ...pts[k].toArray()); for (let c = 0; c < 2; c++) col.push(COL[v].r, COL[v].g, COL[v].b); } } }
@@ -1463,7 +1472,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
       routeG.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors: true })));
       if (red.length) { const all = new Float32Array(red.reduce((s, a) => s + a.length, 0)); let o = 0; for (const a of red) { all.set(a, o); o += a.length; }
         const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(all, 3)); rg.computeVertexNormals(); routeG.add(new THREE.Mesh(rg, poleCutMat)); }
-      routeG.userData.redSpans = nRed; routeG.userData.gisSpans = nAll; routeG.userData.mvSpans = n22; routeG.userData.mvKm = len22 / 1000; routeG.userData.redKm = lenRed / 1000;
+      routeG.userData.redSpans = nRed; routeG.userData.gisSpans = nAll; routeG.userData.mvSpans = n22; routeG.userData.redU = nRedU;
+      Object.assign(routeG.userData, { mvKm: len22 / 1000, mvRouteKm: routeLen / 1000, inCctKm: inCct / 1000, inRouteKm: inRoute / 1000 });
     }
     // dots for the far view
     { const pp = [], cc = []; routePts.forEach(p => { pp.push(p.x, p.y + H + 0.8, p.z); cc.push(...rCol(p).toArray()); });
@@ -1481,7 +1491,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const note = document.getElementById('routeNote');
     note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
       (GM ? `ผลเทียบ PEA GIS (เลือก "ปลอกสีเสาตาม"): <b style="color:#2e8b57">ตรงกัน ≤ ${GM.tol[0]} ม. ${gc.gm}</b> · <b style="color:#a8861b">น่าจะต้นเดียวกัน ${GM.tol[0]}–${GM.tol[1]} ม. ${gc.gp}</b> · <b style="color:#c4651a">ไม่พบแต่สาย GIS ผ่าน ≤ ${GLN} ม. ${gc.gl}</b> · <b style="color:#c0262d">ไม่พบใน GIS ${gc.gn}</b> · เสา GIS ที่ ทล. ไม่ได้สำรวจ ${GM.x.length} ต้น (ม่วง 115 kV, น้ำเงิน 22 kV, เทา แรงต่ำ) เกณฑ์ระยะเป็นค่าสมมติ ${GM.src} ต้องยืนยันที่หน้างาน<br>` : '') +
-      `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. ${window.GISL ? `แนวสายจาก PEA GIS ${routeG.userData.gisSpans.toLocaleString('th-TH')} ช่วง (สีตามแรงดัน: น้ำเงิน 115 kV, น้ำตาล 22 kV, เทา แรงต่ำ; ความสูงจุดยึด 18 / 10.2 / 7 ม. และระยะหย่อนเป็นค่าสมมติ) <b style="color:#c0262d">สาย 22 kV ที่ต้องรื้อ ${routeG.userData.redSpans.toLocaleString('th-TH')} ช่วง ยาวตามแนว ${routeG.userData.redKm.toFixed(1)} กม.</b> จากสาย 22 kV ${routeG.userData.mvSpans.toLocaleString('th-TH')} ช่วง ${routeG.userData.mvKm.toFixed(1)} กม. ในข้อมูล GIS ตามแนวถนน (ไม่นับแรงต่ำและ 115 kV; ช่วง = ระหว่างจุดหักของสายใน GIS ซึ่งอาจไม่ใช่เสาทุกจุด; ความยาวในแปลน ไม่รวมระยะหย่อน) (ปลายใดปลายหนึ่งอยู่ในแนวงานทาง + L.O.W. หรือห่างเสาที่ต้องย้าย ≤ 3 ม.)` : 'สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา)'} ` +
+      `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. ${window.GISL ? `แนวสายจาก PEA GIS ${routeG.userData.gisSpans.toLocaleString('th-TH')} ช่วง (สีตามแรงดัน: น้ำเงิน 115 kV, น้ำตาล 22 kV, เทา แรงต่ำ; ความสูงจุดยึด 18 / 10.2 / 7 ม. และระยะหย่อนเป็นค่าสมมติ) <b style="color:#c0262d">สาย 22 kV ที่ต้องรื้อ: แนวสาย ${routeG.userData.inRouteKm.toFixed(1)} กม. (${routeG.userData.inCctKm.toFixed(1)} กม.-วงจร) ${routeG.userData.redU.toLocaleString('th-TH')} ช่วง</b> จากสาย 22 kV ในข้อมูล GIS ตามแนวถนน แนวสาย ${routeG.userData.mvRouteKm.toFixed(1)} กม. (${routeG.userData.mvKm.toFixed(1)} กม.-วงจร) ${routeG.userData.mvSpans.toLocaleString('th-TH')} ช่วง
+      (ไม่นับแรงต่ำและ 115 kV; ความยาวนับเฉพาะส่วนที่อยู่ในแนวงานทาง + L.O.W. หรือห่างเสาที่ต้องย้าย ≤ 3 ม.; แนวสาย = วงจรที่อยู่บนเสาเดียวกันนับครั้งเดียว (ห่างกัน < 1.5 ม.); ช่วง = ระหว่างจุดหักของสายใน GIS ซึ่งอาจไม่ใช่เสาทุกจุด ช่วงซ้ำนับครั้งเดียว ช่วงสีแดงทั้งช่วงถ้าปลายใดปลายหนึ่งเข้าเกณฑ์; ความยาวในแปลน ไม่รวมระยะหย่อน) (ปลายใดปลายหนึ่งอยู่ในแนวงานทาง + L.O.W. หรือห่างเสาที่ต้องย้าย ≤ 3 ม.)` : 'สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา)'} ` +
       (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง และกลุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> ผนังสูง 3–4 ม. หลังคาปั้นหยา สีอาคาร ต้นไม้ 1 ต้นต่อพื้นที่พุ่ม 45 ม.² สูง 5–9 ม. วางสุ่มในกรอบพุ่ม (ไม่ใช่ตำแหน่งต้นจริง) <b style="color:#c0262d">อาคารสีแดงโปร่ง ${SATCUT.near.bldg + SATCUT.far.bldg} หลัง</b> อยู่บนผิวทางตามแบบ (ถึงขอบไหล่ทาง) ต้องรื้อย้ายเพื่อสร้างถนน หรือเป็นจุดที่ AI ตีผิด (รถ เงา) และ<b style="color:#c0262d">ต้นไม้สีแดงโปร่ง ${(SATCUT.near.tree + SATCUT.far.tree).toLocaleString('th-TH')} ต้น</b>ที่ต้องตัด ต้องตรวจกับการสำรวจ Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
       `ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
   }
