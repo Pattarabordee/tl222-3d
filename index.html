@@ -88,6 +88,9 @@ table.ph th, table.ph td { border-bottom: 1px solid var(--line); padding: 3px 2p
 table.ph th:first-child, table.ph td:first-child { text-align: left; }
 table.ph th { color: var(--muted); font-weight: 600; }
 .calc .assume { grid-column: 1 / -1; font-size: 12.5px; color: var(--warn); margin: -2px 0 4px; }
+.rboq { width: 100%; border-collapse: collapse; margin: 4px 0 8px; color: var(--ink, #222); }
+.rboq th, .rboq td { border: 1px solid #ccc; padding: 2px 4px; text-align: left; vertical-align: top; }
+.rboq td:nth-child(2) { text-align: right; font-weight: 600; white-space: nowrap; }
 .legend2 { font-size: 13px; color: var(--muted); max-width: 80ch; }
 </style>
 
@@ -1488,13 +1491,27 @@ table.ph th { color: var(--muted); font-weight: 600; }
         gx.add(im); } }
     const c = { bad: 0, warn: 0, ok: 0, none: 0 }; routePts.forEach(p => c[rCls(p)]++);
     const gc = { gm: 0, gp: 0, gl: 0, gn: 0, none: 0 }; routePts.forEach(p => gc[gCls(p)]++);
-    const note = document.getElementById('routeNote');
-    note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
+    const note = document.getElementById('routeNote'), U = routeG.userData, th = v => v.toLocaleString('th-TH');
+    // summary of removal / relocation quantities along the whole route, live with L.O.W.
+    const BQ = [['เสาไฟฟ้าอยู่ในแนวงานทาง ต้องย้าย', th(c.bad), 'ต้น', 'เสาที่ ทล. สำรวจ'],
+      [`เสาไฟฟ้าห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (L.O.W.) ต้องตรวจ/ย้าย`, th(c.warn), 'ต้น', 'เสาที่ ทล. สำรวจ; L.O.W. ค่าสมมติ'],
+      ...(window.GISL ? [['สาย 22 kV ที่ต้องรื้อ (แนวสาย)', U.inRouteKm.toFixed(1), 'กม.', `จาก ${U.mvRouteKm.toFixed(1)} กม. ใน GIS; ไม่รวมระยะหย่อน`],
+        ['สาย 22 kV ที่ต้องรื้อ (รายวงจร)', U.inCctKm.toFixed(1), 'กม.-วงจร', `จาก ${U.mvKm.toFixed(1)} กม.-วงจร`],
+        ['ช่วงสาย 22 kV ที่ต้องรื้อ', th(U.redU), 'ช่วง', `จาก ${th(U.mvSpans)} ช่วง (ช่วง = จุดหักใน GIS)`]] : []),
+      ...(window.SATF ? [['อาคารบนผิวทาง ต้องรื้อย้าย', th(SATCUT.near.bldg + SATCUT.far.bldg), 'หลัง', 'AI จากภาพดาวเทียม ต้องตรวจ'],
+        ['ต้นไม้บนผิวทาง ต้องตัด', th(SATCUT.near.tree + SATCUT.far.tree), 'ต้น', 'ค่าสมมติ 1 ต้น/45 ม.² ของพุ่ม']] : [])];
+    routeG.userData.boq = BQ;
+    note.innerHTML = `<b>สรุปปริมาณงานรื้อย้ายทั้งแนว (ประมาณการเบื้องต้น เปลี่ยนตามค่า L.O.W.)</b> <button type="button" id="routeBoqCsv">CSV</button>
+      <table class="rboq"><tr><th>รายการ</th><th>ปริมาณ</th><th>หน่วย</th><th>ที่มา / หมายเหตุ</th></tr>${BQ.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table>` +
+      `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
       (GM ? `ผลเทียบ PEA GIS (เลือก "ปลอกสีเสาตาม"): <b style="color:#2e8b57">ตรงกัน ≤ ${GM.tol[0]} ม. ${gc.gm}</b> · <b style="color:#a8861b">น่าจะต้นเดียวกัน ${GM.tol[0]}–${GM.tol[1]} ม. ${gc.gp}</b> · <b style="color:#c4651a">ไม่พบแต่สาย GIS ผ่าน ≤ ${GLN} ม. ${gc.gl}</b> · <b style="color:#c0262d">ไม่พบใน GIS ${gc.gn}</b> · เสา GIS ที่ ทล. ไม่ได้สำรวจ ${GM.x.length} ต้น (ม่วง 115 kV, น้ำเงิน 22 kV, เทา แรงต่ำ) เกณฑ์ระยะเป็นค่าสมมติ ${GM.src} ต้องยืนยันที่หน้างาน<br>` : '') +
       `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. ${window.GISL ? `แนวสายจาก PEA GIS ${routeG.userData.gisSpans.toLocaleString('th-TH')} ช่วง (สีตามแรงดัน: น้ำเงิน 115 kV, น้ำตาล 22 kV, เทา แรงต่ำ; ความสูงจุดยึด 18 / 10.2 / 7 ม. และระยะหย่อนเป็นค่าสมมติ) <b style="color:#c0262d">สาย 22 kV ที่ต้องรื้อ: แนวสาย ${routeG.userData.inRouteKm.toFixed(1)} กม. (${routeG.userData.inCctKm.toFixed(1)} กม.-วงจร) ${routeG.userData.redU.toLocaleString('th-TH')} ช่วง</b> จากสาย 22 kV ในข้อมูล GIS ตามแนวถนน แนวสาย ${routeG.userData.mvRouteKm.toFixed(1)} กม. (${routeG.userData.mvKm.toFixed(1)} กม.-วงจร) ${routeG.userData.mvSpans.toLocaleString('th-TH')} ช่วง
       (ไม่นับแรงต่ำและ 115 kV; ความยาวนับเฉพาะส่วนที่อยู่ในแนวงานทาง + L.O.W. หรือห่างเสาที่ต้องย้าย ≤ 3 ม.; แนวสาย = วงจรที่อยู่บนเสาเดียวกันนับครั้งเดียว (ห่างกัน < 1.5 ม.); ช่วง = ระหว่างจุดหักของสายใน GIS ซึ่งอาจไม่ใช่เสาทุกจุด ช่วงซ้ำนับครั้งเดียว ช่วงสีแดงทั้งช่วงถ้าปลายใดปลายหนึ่งเข้าเกณฑ์; ความยาวในแปลน ไม่รวมระยะหย่อน) (ปลายใดปลายหนึ่งอยู่ในแนวงานทาง + L.O.W. หรือห่างเสาที่ต้องย้าย ≤ 3 ม.)` : 'สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา)'} ` +
       (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง และกลุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> ผนังสูง 3–4 ม. หลังคาปั้นหยา สีอาคาร ต้นไม้ 1 ต้นต่อพื้นที่พุ่ม 45 ม.² สูง 5–9 ม. วางสุ่มในกรอบพุ่ม (ไม่ใช่ตำแหน่งต้นจริง) <b style="color:#c0262d">อาคารสีแดงโปร่ง ${SATCUT.near.bldg + SATCUT.far.bldg} หลัง</b> อยู่บนผิวทางตามแบบ (ถึงขอบไหล่ทาง) ต้องรื้อย้ายเพื่อสร้างถนน หรือเป็นจุดที่ AI ตีผิด (รถ เงา) และ<b style="color:#c0262d">ต้นไม้สีแดงโปร่ง ${(SATCUT.near.tree + SATCUT.far.tree).toLocaleString('th-TH')} ต้น</b>ที่ต้องตัด ต้องตรวจกับการสำรวจ Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
       `ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
+    document.getElementById('routeBoqCsv').onclick = () => {
+      const csv = '﻿' + [['รายการ', 'ปริมาณ', 'หน่วย', 'ที่มา'], ...BQ].map(r => r.map(s => `"${String(s).replace(/,/g, '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'ปริมาณงานรื้อย้าย_ทล222.csv'; a.click(); };
   }
   // ---- buildings / tree canopies traced from Esri imagery by segment-geospatial (tools/sat_segment.py); heights = ค่าสมมติ ----
   // Display only, all ค่าสมมติ: walls 3.0–4.0 m, hip roof rising 0.35 × the short side (max 2.5 m) with 0.4 m eaves, colours from common Thai houses;
