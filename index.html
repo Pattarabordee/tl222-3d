@@ -335,6 +335,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
 <script src="assets/doh_bridge.js"></script>
 <script src="assets/route_data.js"></script>
 <script src="assets/gis_match.js"></script>
+<script src="assets/gis_lines.js"></script>
 <script src="assets/sat_feat.js"></script>
 <script>
 (async function () {
@@ -1307,10 +1308,10 @@ table.ph th { color: var(--muted); font-weight: 600; }
   // is (x, z) on the designed road (out to the shoulder edge; where the design has no section, the existing road + shoulder)? grid of stations, 50 m cells
   const onRoad = (() => { if (!RST) return () => false; const T = RTE.R.tpl, G = new Map(), key = (i, j) => i + ',' + j;
     RST.forEach(q => { const k = key(Math.floor(q.x / 50), Math.floor(q.z / 50)); (G.get(k) || G.set(k, []).get(k)).push(q); });
-    return (x, z) => { let best = null, bd = Infinity; const i0 = Math.floor(x / 50), j0 = Math.floor(z / 50);
+    return (x, z, pad = 0) => { let best = null, bd = Infinity; const i0 = Math.floor(x / 50), j0 = Math.floor(z / 50);
       for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) for (const q of G.get(key(i, j)) || []) { const d = (q.x - x) ** 2 + (q.z - z) ** 2; if (d < bd) { bd = d; best = q; } }
       if (!best) return false; const off = (x - best.x) * best.nx + (z - best.z) * best.nz, tpl = off > 0 ? best.R : best.L;
-      return Math.abs(off) < (tpl ? T.sh : T.ex[1]); }; })();
+      return Math.abs(off) < (tpl ? T.sh : T.ex[1]) + pad; }; })();   // pad: extra width beyond the shoulder edge (m)
   const SATCUT = { near: { bldg: 0, tree: 0 }, far: { bldg: 0, tree: 0 } };
   const routeY = (x, z) => (Math.abs(x) < 280 && Math.abs(z) < 190 ? gy(x, z) : P.g0 - 100) + 0.12;
   let routeInst = null, routeInstBad = null, routeBad = [], routePts = null;
@@ -1424,7 +1425,8 @@ table.ph th { color: var(--muted); font-weight: 600; }
     for (const im of [rShaft, rArm, rIns]) routeG.add(im);
     routeInst = iShaft; routeInstBad = rShaft;
     // conductors: consecutive poles on the same side, 20–120 m apart (line routing inferred from the pole order = ค่าสมมติ)
-    { const w = [], bySide = [routePts.filter(p => p.off < 0), routePts.filter(p => p.off >= 0)];
+    // used only without PEA GIS lines (assets/gis_lines.js is not on the public site)
+    if (!window.GISL) { const w = [], bySide = [routePts.filter(p => p.off < 0), routePts.filter(p => p.off >= 0)];
       const pairs = []; for (const list of bySide) for (let i = 0; i < list.length; i++) { const a = list[i];
         for (let j = i + 1; j < Math.min(list.length, i + 8); j++) { const c = list[j], L = Math.hypot(c.x - a.x, c.z - a.z); if (Math.abs(c.off - a.off) < 2.5 && L >= 20 && L <= 120) { pairs.push([a, c, L]); break; } } }
       // a span attached to a pole that has to move (red pole) has to be taken down: drawn as translucent red tubes (radius 60 mm for visibility, not the conductor size)
@@ -1438,6 +1440,30 @@ table.ph th { color: var(--muted); font-weight: 600; }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(w, 3)); routeG.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x4a3a22 })));
       if (red.length) { const all = new Float32Array(red.reduce((s, a) => s + a.length, 0)); let o = 0; for (const a of red) { all.set(a, o); o += a.length; }
         const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(all, 3)); rg.computeVertexNormals(); routeG.add(new THREE.Mesh(rg, poleCutMat)); routeG.userData.redSpans = red.length / 3; } }
+    // PEA GIS line routes (tools/gis_lines.py): one line per GIS conductor feature, spans between its vertices (= poles).
+    // Attachment height 115 kV 18 m / 22 kV 10.2 m / LV 7 m and sag are ค่าสมมติ. A span is to be taken down when either end is within
+    // the road works + L.O.W. (shoulder edge + 1:2 slope + L.O.W., from the design section) or within 3 m of a pole drawn red.
+    if (window.GISL) {
+      const HT = [0, 18, H, 7], COL = [null, new THREE.Color(0x1c2f6e), new THREE.Color(0x6b4a1d), new THREE.Color(0x5f6b66)];
+      const moving = routeBad.map(i => routePts[i]), near3 = (x, z) => moving.some(p => (p.x - x) ** 2 + (p.z - z) ** 2 < 9);
+      const goes = (x, z) => onRoad(x, z, EMB * 2 + P.low) || near3(x, z);
+      const pos = [], col = [], red = []; let nRed = 0, nAll = 0;
+      for (const l of GISL.l) { const v = l[0], P3 = [];
+        for (let i = 1; i < l.length; i += 2) { const [x, z] = toM(l[i] * S + R.E0, l[i + 1] * S + R.N0); P3.push([x, z, goes(x, z)]); }
+        for (let i = 1; i < P3.length; i++) { const [ax, az, ra] = P3[i - 1], [bx, bz, rb] = P3[i];
+          if (Math.abs(ax) < 235 && Math.abs(az) < 60 && Math.abs(bx) < 235 && Math.abs(bz) < 60) continue;   // the detailed bridge model owns this stretch
+          const L = Math.hypot(bx - ax, bz - az); if (L < 0.5) continue;
+          const ya = (Math.abs(ax) < 280 && Math.abs(az) < 190 ? gy(ax, az) : g0) + HT[v], yb = (Math.abs(bx) < 280 && Math.abs(bz) < 190 ? gy(bx, bz) : g0) + HT[v], sag = 0.0012 * L * L / 8 + 0.3, n = Math.max(4, Math.min(16, Math.ceil(L / 10)));
+          const pts = []; for (let k = 0; k <= n; k++) { const t = k / n; pts.push(V(ax + (bx - ax) * t, ya + (yb - ya) * t - 4 * sag * t * (1 - t), az + (bz - az) * t)); }
+          nAll++;
+          if (ra || rb) { nRed++; red.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n, 0.06, 5).toNonIndexed().attributes.position.array); }
+          else for (let k = 1; k < pts.length; k++) { pos.push(...pts[k - 1].toArray(), ...pts[k].toArray()); for (let c = 0; c < 2; c++) col.push(COL[v].r, COL[v].g, COL[v].b); } } }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      routeG.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors: true })));
+      if (red.length) { const all = new Float32Array(red.reduce((s, a) => s + a.length, 0)); let o = 0; for (const a of red) { all.set(a, o); o += a.length; }
+        const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(all, 3)); rg.computeVertexNormals(); routeG.add(new THREE.Mesh(rg, poleCutMat)); }
+      routeG.userData.redSpans = nRed; routeG.userData.gisSpans = nAll;
+    }
     // dots for the far view
     { const pp = [], cc = []; routePts.forEach(p => { pp.push(p.x, p.y + H + 0.8, p.z); cc.push(...rCol(p).toArray()); });
       const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3)); pg.setAttribute('color', new THREE.Float32BufferAttribute(cc, 3));
@@ -1454,7 +1480,7 @@ table.ph th { color: var(--muted); font-weight: 600; }
     const note = document.getElementById('routeNote');
     note.innerHTML = `เสาที่ ทล. สำรวจ ${n.toLocaleString('th-TH')} ต้น (ปลอกสีที่โคนเสา): <b style="color:#c0262d">อยู่ในแนวงานทาง ${c.bad}</b> · <b style="color:#b4560f">ห่างขอบงานทาง ≤ ${fmt(P.low)} ม. (ใช้ค่า L.O.W.) ${c.warn}</b> · พ้น ${c.ok} · ไม่มีแบบ ${c.none}<br>` +
       (GM ? `ผลเทียบ PEA GIS (เลือก "ปลอกสีเสาตาม"): <b style="color:#2e8b57">ตรงกัน ≤ ${GM.tol[0]} ม. ${gc.gm}</b> · <b style="color:#a8861b">น่าจะต้นเดียวกัน ${GM.tol[0]}–${GM.tol[1]} ม. ${gc.gp}</b> · <b style="color:#c4651a">ไม่พบแต่สาย GIS ผ่าน ≤ ${GLN} ม. ${gc.gl}</b> · <b style="color:#c0262d">ไม่พบใน GIS ${gc.gn}</b> · เสา GIS ที่ ทล. ไม่ได้สำรวจ ${GM.x.length} ต้น (ม่วง 115 kV, น้ำเงิน 22 kV, เทา แรงต่ำ) เกณฑ์ระยะเป็นค่าสมมติ ${GM.src} ต้องยืนยันที่หน้างาน<br>` : '') +
-      `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา) อาคารสูง 4 ม. ` +
+      `ถนนสร้างจากหน้าตัดในแบบ ทล.: เกาะกลาง 4.60 ม. ผิวจราจรฝั่งละ 7.00 ม. (2 × 3.50) ไหล่ทาง 2.50 ม. ช่วงที่ไม่มีแบบใช้ถนนเดิม 7.00 + ไหล่ 1.00 ม. <b>ค่าสมมติ:</b> คันทางสูง 0.60 ม. ลาด 1:2 พื้นเรียบ (ไม่มี DEM ทั้งแนว) เสาสูง 12 ม. ${window.GISL ? `แนวสายจาก PEA GIS ${routeG.userData.gisSpans.toLocaleString('th-TH')} ช่วง (สีตามแรงดัน: น้ำเงิน 115 kV, น้ำตาล 22 kV, เทา แรงต่ำ; ความสูงจุดยึด 18 / 10.2 / 7 ม. และระยะหย่อนเป็นค่าสมมติ) <b style="color:#c0262d">สายที่ต้องรื้อ ${routeG.userData.redSpans.toLocaleString('th-TH')} ช่วง</b> (ปลายใดปลายหนึ่งอยู่ในแนวงานทาง + L.O.W. หรือห่างเสาที่ต้องย้าย ≤ 3 ม.)` : 'สายต่อเสาที่อยู่ติดกันฝั่งเดียวกัน (ตีความจากลำดับเสา)'} ` +
       (window.SATF ? `<br>อาคาร ${SATF.bldg.length.toLocaleString('th-TH')} หลัง และกลุ่มต้นไม้ ${SATF.tree.length.toLocaleString('th-TH')} กลุ่ม ตีกรอบด้วย AI จากภาพ Esri World Imagery ข้างละ 80 ม. จาก CL ไม่ใช่การสำรวจ อาจตกหล่นหรือผิด <b>ค่าสมมติ:</b> ผนังสูง 3–4 ม. หลังคาปั้นหยา สีอาคาร ต้นไม้ 1 ต้นต่อพื้นที่พุ่ม 45 ม.² สูง 5–9 ม. วางสุ่มในกรอบพุ่ม (ไม่ใช่ตำแหน่งต้นจริง) <b style="color:#c0262d">อาคารสีแดงโปร่ง ${SATCUT.near.bldg + SATCUT.far.bldg} หลัง</b> อยู่บนผิวทางตามแบบ (ถึงขอบไหล่ทาง) ต้องรื้อย้ายเพื่อสร้างถนน หรือเป็นจุดที่ AI ตีผิด (รถ เงา) และ<b style="color:#c0262d">ต้นไม้สีแดงโปร่ง ${(SATCUT.near.tree + SATCUT.far.tree).toLocaleString('th-TH')} ต้น</b>ที่ต้องตัด ต้องตรวจกับการสำรวจ Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community<br>` : '') +
       `ดับเบิลคลิกเสาเพื่อดูรายละเอียด ตารางและ CSV ดูที่หน้า <a href="route.html">แนวทางทั้งโครงการ</a>`;
   }
