@@ -1427,11 +1427,17 @@ table.ph th { color: var(--muted); font-weight: 600; }
     { const w = [], bySide = [routePts.filter(p => p.off < 0), routePts.filter(p => p.off >= 0)];
       const pairs = []; for (const list of bySide) for (let i = 0; i < list.length; i++) { const a = list[i];
         for (let j = i + 1; j < Math.min(list.length, i + 8); j++) { const c = list[j], L = Math.hypot(c.x - a.x, c.z - a.z); if (Math.abs(c.off - a.off) < 2.5 && L >= 20 && L <= 120) { pairs.push([a, c, L]); break; } } }
+      // a span attached to a pole that has to move (red pole) has to be taken down: drawn as translucent red tubes (radius 60 mm for visibility, not the conductor size)
+      const moving = new Set(routeBad.map(i => routePts[i])), red = [];
       for (const [a, b, L] of pairs) {
-        const qa = new THREE.Quaternion().setFromAxisAngle(up, a.ry), qb = new THREE.Quaternion().setFromAxisAngle(up, b.ry), sag = 0.0012 * L * L / 8 + 0.3;
-        for (const d of [-0.95, 0, 0.95]) { const A = V(0, H - 0.05, d).applyQuaternion(qa).add(V(a.x, a.y, a.z)), B = V(0, H - 0.05, d).applyQuaternion(qb).add(V(b.x, b.y, b.z));
-          let prev = A; for (let k = 1; k <= 8; k++) { const t = k / 8, P2 = V(A.x + (B.x - A.x) * t, A.y + (B.y - A.y) * t - 4 * sag * t * (1 - t), A.z + (B.z - A.z) * t); w.push(prev.x, prev.y, prev.z, P2.x, P2.y, P2.z); prev = P2; } } }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(w, 3)); routeG.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x4a3a22 }))); }
+        const qa = new THREE.Quaternion().setFromAxisAngle(up, a.ry), qb = new THREE.Quaternion().setFromAxisAngle(up, b.ry), sag = 0.0012 * L * L / 8 + 0.3, rm = moving.has(a) || moving.has(b);
+        for (const d of [-0.95, 0, 0.95]) { const A = V(0, H - 0.05, d).applyQuaternion(qa).add(V(a.x, a.y, a.z)), B = V(0, H - 0.05, d).applyQuaternion(qb).add(V(b.x, b.y, b.z)), pts = [A];
+          for (let k = 1; k <= 8; k++) { const t = k / 8; pts.push(V(A.x + (B.x - A.x) * t, A.y + (B.y - A.y) * t - 4 * sag * t * (1 - t), A.z + (B.z - A.z) * t)); }
+          if (rm) red.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, 0.06, 5).toNonIndexed().attributes.position.array);
+          else for (let k = 1; k < pts.length; k++) w.push(...pts[k - 1].toArray(), ...pts[k].toArray()); } }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(w, 3)); routeG.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x4a3a22 })));
+      if (red.length) { const all = new Float32Array(red.reduce((s, a) => s + a.length, 0)); let o = 0; for (const a of red) { all.set(a, o); o += a.length; }
+        const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.BufferAttribute(all, 3)); rg.computeVertexNormals(); routeG.add(new THREE.Mesh(rg, poleCutMat)); routeG.userData.redSpans = red.length / 3; } }
     // dots for the far view
     { const pp = [], cc = []; routePts.forEach(p => { pp.push(p.x, p.y + H + 0.8, p.z); cc.push(...rCol(p).toArray()); });
       const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pp, 3)); pg.setAttribute('color', new THREE.Float32BufferAttribute(cc, 3));
